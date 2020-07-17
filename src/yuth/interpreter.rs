@@ -54,6 +54,21 @@ impl Interpreter {
         self.environment.borrow_mut().define(token.lexeme.clone(), value);
         None
       }),
+      Stmt::If(ref expr, ref then_stmt, ref else_stmt) => {
+        if self.interpret_expression(expr)?.is_truthy() {
+          self.interpret_statement(then_stmt)?;
+        } else if let Some(else_branch) = &**else_stmt {
+          self.interpret_statement(&else_branch)?;
+        }
+        Ok(None)
+      },
+      Stmt::While(ref condition, ref body) => {
+        while self.interpret_expression(condition)?.is_truthy() {
+          self.interpret_statement(body)?;
+        }
+
+        Ok(None)
+      },
       Stmt::Block(ref statements) => {
         let env = Environment::enclose(self.environment.clone());
         self.interpret_block(statements, RefCell::new(env))
@@ -134,10 +149,29 @@ impl Interpreter {
           Err(e) => Err(RuntimeError::UndefinedVariable(token.clone())),
         }
       },
+      Expr::Logical(ref left, ref token, ref right) => {
+        let left = self.interpret_expression(left)?;
+
+        if token.token_type == TokenType::Or {
+          if left.is_truthy() { return Ok(left) };
+        } else {
+          if !left.is_truthy() { return Ok(left) };
+        }
+
+        return self.interpret_expression(right);  
+      },
       Expr::Grouping(ref expr) => {
         self.interpret_expression(&expr)
       }
     }
   }
 
+  
 }
+  // pub fn is_truthy(value: YuthValue) -> bool {
+  //   match value {
+  //     YuthValue::Nil => false,
+  //     YuthValue::Bool(b) => b,
+  //     _ => true,
+  //   }
+  // }

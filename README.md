@@ -82,16 +82,28 @@ program     → declaration* EOF ;
 declaration → var_declaration
             | statement ;
 
-statement   → expression
-            | print_statement ;
-            | block ;
+statement → expression_statement
+          | for_statement
+          | if_statement
+          | print_statement
+          | while_statement
+          | block ;
+
+for_statement   → "for" "(" ( var_declaration | expression_statement | ";" )
+                      expression? ";"
+                      expression? ")" statement ;
+
+
+if_statement    → "if" "(" expression ")" statement ( "else" statement )? ;
 
 expression      → assignment ;
 print_statement → "print" expression ";" ;
 block           → "{" declaration* "}" ;
 
-assignment      → IDENTIFIER "=" assignment
-                | equality ;
+assignment → identifier "=" assignment
+           | logic_or ;
+logic_or   → logic_and ( "or" logic_and )* ;
+logic_and  → equality ( "and" equality )* ;
 
 equality       → comparison ( ( "!=" | "==" ) comparison )* ;
 comparison     → addition ( ( ">" | ">=" | "<" | "<=" ) addition )* ;
@@ -105,5 +117,7 @@ primary        → "true" | "false" | "nil"
                 | IDENTIFIER ;
 
 
-
 ```
+
+# Thanks
+it is inspired by Lox language from this [book](http://craftinginterpreters.com/) by Bob Nystrom ( highly recommend to check this out, it's comprehensive/enjoying to read).

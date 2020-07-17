@@ -10,6 +10,7 @@ pub enum Expr{
   Grouping(Box<Expr>),
   Var(Token, Option<usize>),
   Assign(Token, Box<Expr>, Option<usize>),
+  Logical(Box<Expr>, Token, Box<Expr>)
 }
 
 
@@ -36,7 +37,11 @@ impl fmt::Display for Expr {
       },
       Expr::Assign(ref token, ref expr, _) => { 
        write!(f, "(assign {} {})", token.lexeme, expr)
+      },
+      Expr::Logical(ref left, ref token, ref right) => { 
+       write!(f, "Logical = ({} {} {})", left, token.lexeme, right)
       }
+
     }
   }
 }

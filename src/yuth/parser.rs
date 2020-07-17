@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use super::yuth::Yuth;
 use super::token::{ Literal, Token};
 use super::token_type::TokenType;
@@ -83,6 +85,12 @@ impl Parser{
       self.print_statement()
     } else if self.is_match(vec![TokenType::LeftBrace]){
       self.block_statement()
+    } else if self.is_match(vec![TokenType::If]){
+      self.if_statement()
+    } else if self.is_match(vec![TokenType::While]){
+      self.while_statement()
+    } else if self.is_match(vec![TokenType::For]){
+      self.for_statement()
     } else {
       self.expression_statement()
     }
@@ -97,6 +105,74 @@ impl Parser{
 
     self.consume(TokenType::RightBrace, "Expect '}' after block.")?;
     return Ok(Stmt::Block(statements));
+  }
+
+  fn  if_statement(&mut self) -> Result<Stmt, ParsingError> {
+    self.consume(TokenType::LeftParen, "Expect '(' after 'if'.")?;
+    let condition = self.expression()?;
+    self.consume(TokenType::RightParen, "Expect ')' after if condition.")?; 
+
+    let then_branch = self.statement()?;
+    let mut else_branch = None;
+    if self.is_match(vec![TokenType::Else]) {
+      if let Ok(stmt) = self.statement(){
+        else_branch = Some(stmt);
+      }
+    }
+
+    return Ok(Stmt::If(condition, Box::new(then_branch), Box::new(else_branch) ));
+  }
+
+  fn while_statement( &mut self) -> Result<Stmt, ParsingError>{
+    self.consume(TokenType::LeftParen, "Expect '(' after 'while'.")?;
+    let condition = self.expression()?;
+    self.consume(TokenType::RightParen, "Expect ')' after condition.")?;
+    let body = self.statement()?;
+
+    println!("condition = {}", &condition);
+    return Ok(Stmt::While(condition, Box::new(body)));    
+  }
+
+  fn for_statement(&mut self) -> Result<Stmt, ParsingError> {
+    self.consume(TokenType::LeftParen, "Expect '(' after 'for'.")?;
+
+    let initializer;
+    if self.is_match(vec![TokenType::Semicolon]) {
+      initializer = Ok(Stmt::Expr(Expr::Literal(Literal::Nil)));
+    } else if self.is_match(vec![TokenType::Var]) {
+      initializer = self.var_declaration();
+    } else {
+      initializer = self.expression_statement();
+    }
+
+    let mut condition = Ok(Expr::Literal(Literal::Nil));
+    if !self.check(&TokenType::Semicolon) {
+      condition = self.expression();
+    }
+    self.consume(TokenType::Semicolon, "Expect ';' after loop condition.")?;
+
+    let mut increment = Ok(Expr::Literal(Literal::Nil));
+    if !self.check(&TokenType::RightParen) {
+      increment = self.expression();
+    }
+    self.consume(TokenType::RightParen, "Expect ')' after for clauses.")?;
+
+    let mut body = self.statement().unwrap();
+
+    if let Ok(value) = &increment {
+      body = Stmt::Block(vec![body, Stmt::Expr(increment.unwrap())] );
+    }
+
+    if let Ok(Expr::Literal(Literal::Nil)) = condition {
+      condition = Ok(Expr::Literal(Literal::Bool(true)));
+    }
+    body = Stmt::While(condition.unwrap(), Box::new(body));
+
+    if let Ok(init_val) = &initializer {
+      body = Stmt::Block(vec![initializer.unwrap(), body]);
+    }
+
+    return Ok(body);
   }
 
   fn expression_statement(&mut self) -> Result<Stmt, ParsingError> {
@@ -114,7 +190,7 @@ impl Parser{
   }
 
   fn assignment(&mut self) -> Result<Expr, ParsingError>{
-    let expr = self.equality()?;
+    let expr = self.or()?;
 
     if self.is_match(vec![TokenType::Equal]) {
       let equals =  self.previous().clone();
@@ -127,6 +203,30 @@ impl Parser{
         _ => return Err(ParsingError::InvalidAssignmentError(equals))
       }
     }
+    return Ok(expr);
+  }
+
+  fn  or(&mut self) -> Result<Expr, ParsingError> {
+    let mut expr = self.and()?;
+
+    while self.is_match(vec![TokenType::Or]) {
+      let operator = self.previous().clone(); // not sure why using this expression in second arg in Expr::Logical() is not working.
+      let right = self.and()?;
+      expr = Expr::Logical(Box::new(expr), operator, Box::new(right) );
+    }
+
+    return Ok(expr);
+  }
+
+  fn and(&mut self) -> Result<Expr, ParsingError> {
+    let mut expr = self.equality()?;
+
+    while self.is_match(vec![ TokenType::And ]) {
+      let operator = self.previous().clone();
+      let right = self.equality()?;
+      expr = Expr::Logical(Box::new(expr), operator, Box::new(right));
+    }
+
     return Ok(expr);
   }
 
