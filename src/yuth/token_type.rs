@@ -33,7 +33,7 @@ pub enum TokenType {
   Class,
   Else,
   False,
-  Fn,
+  Func,
   For,
   If,
   Nil,

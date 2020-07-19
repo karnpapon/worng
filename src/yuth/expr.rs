@@ -4,9 +4,10 @@ use std::fmt;
 
 #[derive(Debug, Clone)]
 pub enum Expr{
-  Binary(Box<Expr>,Token,Box<Expr>),
   Unary(Token,Box<Expr>),
   Literal(Literal),
+  Binary(Box<Expr>,Token,Box<Expr>),
+  Call(Box<Expr>, Token, Vec<Expr>),
   Grouping(Box<Expr>),
   Var(Token, Option<usize>),
   Assign(Token, Box<Expr>, Option<usize>),
@@ -40,6 +41,9 @@ impl fmt::Display for Expr {
       },
       Expr::Logical(ref left, ref token, ref right) => { 
        write!(f, "Logical = ({} {} {})", left, token.lexeme, right)
+      },
+      Expr::Call(ref callee, ref paren, ref arguments) => { 
+       write!(f, "Call = {}, {:?}, {:?}", callee, paren, arguments)
       }
 
     }

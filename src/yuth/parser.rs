@@ -50,7 +50,9 @@ impl Parser{
     let statement;
     if self.is_match(vec![TokenType::Var]){
       statement = self.var_declaration();
-    } else {
+    } else if self.is_match(vec![TokenType::Func]) {
+      statement = self.function_declaration("function"); 
+    } else  {
       statement = self.statement();
     };
 
@@ -78,6 +80,28 @@ impl Parser{
       Ok(_) => Ok(Stmt::Var(key, initializer )),
       Err(err) => Err(err),
     }
+  }
+
+  fn function_declaration(&mut self, kind: &str) -> Result<Stmt, ParsingError>{
+    let name = self.consume(TokenType::Identifier, format!("Expect {} name.", kind).as_ref() )?;
+
+
+    self.consume(TokenType::LeftParen, format!("Expect '(' after {} name." , kind).as_ref() )?;
+    let mut parameters = Vec::new();
+    if !self.check(&TokenType::RightParen) {
+      parameters.push(self.consume(TokenType::Identifier, "Expect parameter name.")?);
+      while self.is_match(vec![TokenType::Comma]){
+        if parameters.len() >= 10 {
+          // error(self.peek(), "Cannot have more than 255 parameters.");
+          println!("Cannot have more than 255 parameters.");
+        }
+        parameters.push(self.consume(TokenType::Identifier, "Expect parameter name.")?);
+      }
+    }
+    self.consume(TokenType::RightParen, "Expect ')' after parameters.")?;
+    self.consume(TokenType::LeftBrace, format!("Expect \"{{\" before {} body." , kind).as_ref() )?;
+    let body = self.block_statement()?;
+    return Ok(Stmt::Func(name, parameters, Box::new(body) ));
   }
   
   fn statement(&mut self) -> Result<Stmt, ParsingError> {
@@ -210,7 +234,9 @@ impl Parser{
     let mut expr = self.and()?;
 
     while self.is_match(vec![TokenType::Or]) {
-      let operator = self.previous().clone(); // not sure why using this expression in second arg in Expr::Logical() is not working.
+      // not sure why using this expression directly is not working.
+      // eg. Expr::Logical(Box::new(expr), self.previous().clone(), Box::new(right) ); is not working.
+      let operator = self.previous().clone(); 
       let right = self.and()?;
       expr = Expr::Logical(Box::new(expr), operator, Box::new(right) );
     }
@@ -291,10 +317,44 @@ impl Parser{
     }
 
     
-    return self.primary();
+    return self.call();
+  }
+
+  fn call(&mut self) -> Result<Expr, ParsingError> {
+    
+    let mut expr = self.primary();
+
+    loop { 
+      if self.is_match(vec![TokenType::LeftParen]) {
+        expr = self.finish_call(expr?);
+      } else {
+        break;
+      }
+    }
+
+    return expr;
+  }
+
+  fn finish_call(&mut self, callee: Expr) -> Result<Expr, ParsingError>{
+    let mut arguments: Vec<Expr> = Vec::new();
+    if !self.check(&TokenType::RightParen) {
+      arguments.push(self.expression()?);
+
+      while self.is_match(vec![TokenType::Comma]){
+        if arguments.len() >= 10 {
+          return Err(ParsingError::TooManyArgumentsError); // no needs to throw en error, just report, is fine.
+        }
+        arguments.push(self.expression()?);
+      }
+    }
+
+    let paren = self.consume(TokenType::RightParen, "Expect ')' after arguments.")?;
+
+    return Ok(Expr::Call(Box::new(callee), paren, arguments));
   }
   
   fn primary(&mut self) -> Result<Expr, ParsingError> {
+
     if self.is_match(vec![TokenType::False]) { return Ok(Expr::Literal(Literal::Bool(false))); }
     if self.is_match(vec![TokenType::True]) { return Ok(Expr::Literal(Literal::Bool(true))); }
     if self.is_match(vec![TokenType::Nil]) { return Ok(Expr::Literal(Literal::Nil)); }
@@ -359,7 +419,7 @@ impl Parser{
 
       match self.peek().token_type {
         TokenType::Class |
-        TokenType::Fn |
+        TokenType::Func |
         TokenType::Var |
         TokenType::For |
         TokenType::If |

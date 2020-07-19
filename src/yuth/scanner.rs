@@ -30,7 +30,7 @@ impl Scanner{
       "else"  => Some(TokenType::Else),
       "false"  => Some(TokenType::False),
       "for"  => Some(TokenType::For),
-      "fn"  => Some(TokenType::Fn),
+      "fun"  => Some(TokenType::Func),
       "if"  => Some(TokenType::If),
       "nil"  => Some(TokenType::Nil),
       "or"  => Some(TokenType::Or),

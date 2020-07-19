@@ -30,7 +30,9 @@ pub enum RuntimeError{
   AddNonNumbers(Token),
   DivideByZero(Token),
   InternalError(String),
-  UndefinedVariable(Token)
+  UndefinedVariable(Token),
+  ArityError(usize, usize),
+  CallOnNonCallable(Token)
 }
 
 #[derive(Debug)]
@@ -84,6 +86,12 @@ impl std::fmt::Display for RuntimeError {
       },
       RuntimeError::UndefinedVariable(ref token) => {
         write!(f,  "[line {}] Undefined variable -> {}", token.line, token.lexeme)
+      },
+      RuntimeError::ArityError(ref expected, ref size ) => {
+        write!(f,  "Expected {} arguments but got {}.", expected, size )
+      },
+      RuntimeError::CallOnNonCallable(ref token ) => {
+        write!(f,  "call on non-callable: {}.", token.lexeme )
       }
     }
   }
@@ -102,7 +110,7 @@ impl std::fmt::Display for ParsingError {
         write!(f, "[Line: {}] invalid assingment error", token.line)
       },
       ParsingError::TooManyArgumentsError => {
-        write!(f, "too many argument error")
+        write!(f, "Cannot have more than 255 arguments.")
       },
       ParsingError::TooManyParametersError => {
         write!(f, "too many params error")

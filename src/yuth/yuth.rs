@@ -3,6 +3,7 @@ use std::fs;
 use std::path::Path;
 use std::error::{Error};
 use std::ops::Sub;
+use std::rc::Rc;
 
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
@@ -11,12 +12,11 @@ use super::scanner::Scanner;
 use super::statement::Stmt;
 use super::token::Token;
 use super::token_type::TokenType;
+use super::callable::Callable;
 use super::parser::Parser;
 use super::interpreter::Interpreter;
 use super::expr::Expr;
 use super::error::{ YuthError, ValueError, RuntimeError };
-
-// type Result<T> = ::std::result::Result<T, Box<::std::error::Error>>;
 
 #[derive(Debug)]
 pub struct Yuth {
@@ -24,18 +24,32 @@ pub struct Yuth {
   pub had_runtime_error: bool,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug)]
 pub enum YuthValue {
-  Identifier(String),
+  // Identifier(String),
   Number(f64),
   String(String),
   Bool(bool),
+  Func(Rc<dyn Callable>),
   Nil,
 }
 
 // pub enum YuthError{
 //   InternalError(String),
 // }
+
+impl std::clone::Clone for YuthValue {
+  fn clone(&self) -> YuthValue {
+      match *self {
+          YuthValue::Number(number) => YuthValue::Number(number),
+          YuthValue::String(ref string) => YuthValue::String(string.clone()),
+          YuthValue::Bool(b) => YuthValue::Bool(b),
+          YuthValue::Nil => YuthValue::Nil,
+          YuthValue::Func(ref func) => YuthValue::Func(func.clone()),
+      }
+  }
+}
+
 
 impl Yuth {
   
@@ -214,11 +228,16 @@ impl YuthValue {
   }
 
   pub fn is_equal(&self, other: &YuthValue) -> bool {
-    match (&self , &other) {
-      (YuthValue::Nil, YuthValue::Nil) => { return true},
-      (YuthValue::Nil, _) => { return false }
-      _ => { return self == other } 
-    }
+    let boo = match (&self , &other) {
+      (&YuthValue::Nil, &YuthValue::Nil) => { true},
+      (&YuthValue::Bool(b), &YuthValue::Bool(other)) => b == other,
+      (&YuthValue::String(ref string), &YuthValue::String(ref other)) => string == other,
+      (&YuthValue::Number(num), &YuthValue::Number(other)) => num == other,
+      (&YuthValue::Func(ref f), &YuthValue::Func(ref other)) => Rc::ptr_eq(f, other),
+      _ => false,
+    };
+
+    boo
   }
 
   pub fn negate_number(&self) -> Result<YuthValue, ValueError> {
@@ -241,4 +260,12 @@ impl YuthValue {
     }
   }
 
+  pub fn get_callable(&self) -> Option<Rc<dyn Callable>> {
+    match *self {
+      YuthValue::Func(ref func) => Some(func.clone()),
+      _ => None,
+    }
+  }
+
 }
+

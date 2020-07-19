@@ -3,7 +3,7 @@ use super::yuth::{YuthValue};
 
 #[derive(Debug, PartialEq,Clone)]
 pub enum Literal {
-  Identifier(String),
+  // Identifier(String),
   String(String),
   Number(f64),
   Bool(bool),
@@ -14,7 +14,7 @@ pub enum Literal {
 impl std::fmt::Display for Literal {
   fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
     match *self {
-      Literal::Identifier(ref iden) => write!(f, "{}", iden),
+      // Literal::Identifier(ref iden) => write!(f, "{}", iden),
       Literal::Number(ref number) => write!(f, "{}", number),
       Literal::String(ref string) => write!(f, "{}", string),
       Literal::Bool(ref b) => write!(f, "{}", b),
@@ -62,7 +62,7 @@ impl Token{
 impl Literal {
   pub fn value(&self) -> Option<YuthValue> {
     let v = match *self {
-      Literal::Identifier(ref iden) => Some(YuthValue::Identifier(iden.to_string())),
+      // Literal::Identifier(ref iden) => Some(YuthValue::Identifier(iden.to_string())),
       Literal::Number(number) => Some(YuthValue::Number(number)),
       Literal::String(ref string) => Some(YuthValue::String(string.to_string())),
       Literal::Bool(ref boo) => Some(YuthValue::Bool(boo.clone())),

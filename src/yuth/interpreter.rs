@@ -8,19 +8,23 @@ use super::token::{Literal, Token};
 use super::yuth::{YuthValue};
 use super::statement::Stmt;
 use super::error::{YuthError, ParsingError, RuntimeError };
+use super::yuth_function::YuthFunction;
 use super::environment::Environment;
 
 pub struct Interpreter{
-  // value: Box<Expr>
-  environment: Rc<RefCell<Environment>>,
+  pub globals: Rc<RefCell<Environment>>,
+  environment: Rc<RefCell<Environment>>
 }
 
 impl Interpreter {
 
   pub fn new() -> Self{
+    let globals = Rc::new(RefCell::new(Environment::global()));
+
     Interpreter{
-      environment: Rc::new(RefCell::new(Environment::new()))
-     }
+      globals: globals.clone(),
+      environment: globals.clone()
+    }
   }
 
   pub fn check_number_operand(&self, _operator: &Token, operand: &YuthValue) -> Result<(), RuntimeError> {
@@ -49,7 +53,9 @@ impl Interpreter {
          }
         )
       },
-      Stmt::Expr(ref expr) => self.interpret_expression(expr).map(|_| None),
+      Stmt::Expr(ref expr) => { 
+        self.interpret_expression(expr).map(|_| None)
+      },
       Stmt::Var(ref token, ref expr) => self.interpret_expression(expr).map(|value| {
         self.environment.borrow_mut().define(token.lexeme.clone(), value);
         None
@@ -72,6 +78,11 @@ impl Interpreter {
       Stmt::Block(ref statements) => {
         let env = Environment::enclose(self.environment.clone());
         self.interpret_block(statements, RefCell::new(env))
+      },
+      Stmt::Func(ref name, ref params, ref body) => {
+        let function = YuthValue::Func(Rc::new(YuthFunction::new(statement.clone()) ) );
+        self.environment.borrow_mut().define(name.clone().lexeme, function);
+        return Ok(None);
       }
     }
   }
@@ -162,16 +173,34 @@ impl Interpreter {
       },
       Expr::Grouping(ref expr) => {
         self.interpret_expression(&expr)
-      }
+      },
+      Expr::Call(ref call, ref paren, ref arguments) => { 
+        let function = self.interpret_expression(call)?
+                          .get_callable()
+                          .ok_or_else(|| RuntimeError::CallOnNonCallable(paren.clone()))?;
+
+        let mut _arguments = Vec::new();
+        for argument in arguments { 
+          _arguments.push(self.interpret_expression(argument)?);
+        }
+
+        // match function {
+        //   Ok(func) => {
+        //     if let YuthValue::Func(ref _func) = func {
+        //       if arguments.len() != _func.arity() {
+        //         return Err(RuntimeError::ArityError(_func.arity(), arguments.len())); 
+        //       }
+        //     }
+        //   },
+        //   Err(e) => return Err(RuntimeError::RuntimeError)
+        // }
+
+        if arguments.len() != function.arity() {
+          return Err(RuntimeError::ArityError(function.arity(), arguments.len())); 
+        }
+
+        return function.call(self, _arguments);
+      },
     }
   }
-
-  
 }
-  // pub fn is_truthy(value: YuthValue) -> bool {
-  //   match value {
-  //     YuthValue::Nil => false,
-  //     YuthValue::Bool(b) => b,
-  //     _ => true,
-  //   }
-  // }

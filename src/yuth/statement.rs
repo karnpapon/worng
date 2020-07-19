@@ -4,14 +4,15 @@ use super::expr::Expr;
 use super::token::{ Literal, Token };
 use super::error::ParsingError;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Stmt {
   Expr(Expr),
   Print(Expr),
   Var(Token, Expr),
   Block(Vec<Stmt>),
   If(Expr, Box<Stmt>, Box<Option<Stmt>>),
-  While(Expr, Box<Stmt>)
+  While(Expr, Box<Stmt>),
+  Func(Token, Vec<Token>, Box<Stmt>),
 }
 
 impl std::fmt::Display for Stmt {
@@ -34,6 +35,9 @@ impl std::fmt::Display for Stmt {
       },
       Stmt::While(ref expr, ref stmt) => {
         write!(f, "while condition = {:?} then {:?} ", expr, stmt)
+      },
+      Stmt::Func(ref name, ref params, ref body) => {
+        write!(f, "function name: {:?}, params: {:?}, body {:?} ", name, params, body)
       }
     }
   }

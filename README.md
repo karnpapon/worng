@@ -79,8 +79,14 @@ operator   → "==" | "!=" | "<" | "<=" | ">" | ">="
 
 program     → declaration* EOF ;
 
-declaration → var_declaration
-            | statement ;
+declaration → function_declaration
+            | var_declaration
+            | statement 
+
+function_declaration  → "fun" function ;
+function → IDENTIFIER "(" parameters? ")" block ;
+
+parameters → IDENTIFIER ( "," IDENTIFIER )* ;
 
 statement → expression_statement
           | for_statement
@@ -109,8 +115,13 @@ equality       → comparison ( ( "!=" | "==" ) comparison )* ;
 comparison     → addition ( ( ">" | ">=" | "<" | "<=" ) addition )* ;
 addition       → multiplication ( ( "-" | "+" ) multiplication )* ;
 multiplication → unary ( ( "/" | "*" ) unary )* ;
-unary          → ( "!" | "-" ) unary
-                | primary ;
+
+
+unary → ( "!" | "-" ) unary | call ;
+call  → primary ( "(" arguments? ")" )* ;
+
+arguments → expression ( "," expression )* ;    // eg (arg1, arg2) or more args.
+
 primary        → "true" | "false" | "nil"
                 | NUMBER | STRING
                 | "(" expression ")"
