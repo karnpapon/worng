@@ -115,6 +115,8 @@ impl Parser{
       self.while_statement()
     } else if self.is_match(vec![TokenType::For]){
       self.for_statement()
+    } else if self.is_match(vec![TokenType::Return]) {
+      self.return_statement()
     } else {
       self.expression_statement()
     }
@@ -197,6 +199,29 @@ impl Parser{
     }
 
     return Ok(body);
+  }
+
+  fn print_statement(&mut self) -> Result<Stmt, ParsingError> {
+    let expr = self.expression()?;
+
+    match self.consume( TokenType::Semicolon, "Expect ';' after expression.") {
+      Ok(_) => Ok(Stmt::Print(expr)),
+      Err(err) => Err(err),
+    }
+  }
+
+  fn return_statement(&mut self) -> Result<Stmt, ParsingError>{
+    
+    let keyword = self.previous().clone();
+    let mut value = Expr::Literal(Literal::Nil);
+    
+    if !self.check(&TokenType::Semicolon){
+      value = self.expression()?;
+    }
+
+    self.consume(TokenType::Semicolon, "Expect ';' after return value.")?;
+
+    return Ok(Stmt::Return(keyword, Box::new(value)) );
   }
 
   fn expression_statement(&mut self) -> Result<Stmt, ParsingError> {
@@ -375,15 +400,6 @@ impl Parser{
       }
     } else {
       Err(ParsingError::ParsingError) 
-    }
-  }
-
-  fn print_statement(&mut self) -> Result<Stmt, ParsingError> {
-    let expr = self.expression()?;
-
-    match self.consume( TokenType::Semicolon, "Expect ';' after expression.") {
-      Ok(_) => Ok(Stmt::Print(expr)),
-      Err(err) => Err(err),
     }
   }
 

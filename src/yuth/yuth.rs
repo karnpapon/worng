@@ -26,7 +26,6 @@ pub struct Yuth {
 
 #[derive(Debug)]
 pub enum YuthValue {
-  // Identifier(String),
   Number(f64),
   String(String),
   Bool(bool),
@@ -34,19 +33,27 @@ pub enum YuthValue {
   Nil,
 }
 
-// pub enum YuthError{
-//   InternalError(String),
-// }
+impl std::fmt::Display for YuthValue {
+  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    match *self {
+      YuthValue::Number(number) => write!(f, "{}", number),
+      YuthValue::String(ref string) => write!(f, "{}", string),
+      YuthValue::Bool(b) => write!(f, "{}", b),
+      YuthValue::Func(_) => f.write_str("func"),
+      YuthValue::Nil => f.write_str("nil"),
+    }
+  }
+}
 
 impl std::clone::Clone for YuthValue {
   fn clone(&self) -> YuthValue {
-      match *self {
-          YuthValue::Number(number) => YuthValue::Number(number),
-          YuthValue::String(ref string) => YuthValue::String(string.clone()),
-          YuthValue::Bool(b) => YuthValue::Bool(b),
-          YuthValue::Nil => YuthValue::Nil,
-          YuthValue::Func(ref func) => YuthValue::Func(func.clone()),
-      }
+    match *self {
+      YuthValue::Number(number) => YuthValue::Number(number),
+      YuthValue::String(ref string) => YuthValue::String(string.clone()),
+      YuthValue::Bool(b) => YuthValue::Bool(b),
+      YuthValue::Nil => YuthValue::Nil,
+      YuthValue::Func(ref func) => YuthValue::Func(func.clone()),
+    }
   }
 }
 
@@ -68,7 +75,7 @@ impl Yuth {
   
   fn run_file(&mut self, path: String) -> Result<(), RuntimeError> {
     let _path = Path::new(&path);
-    let mut bytes = match fs::read_to_string(_path){
+    let  bytes = match fs::read_to_string(_path){
       Err(err) => panic!("couldn't open file: {}", err),
       Ok(file) => file
     };
@@ -101,17 +108,21 @@ impl Yuth {
     Ok(())
   }
   
-  fn run(&mut self, source: String) {
+  fn run(&mut self, source: String) -> Result<(),()> {
     let mut scanner = Scanner::new(&source);
     let tokens: Vec<Token> = scanner.scan_tokens();
     
     let mut parser = Parser::new(tokens);
+
     let expression: Vec<Stmt> = parser.parse().unwrap();
     let mut interpreter = Interpreter::new();
 
-    if self.had_error { return };
+    // if self.had_error { return };
 
-    interpreter.interpret(expression);
+    match interpreter.interpret(expression) {
+      Some(err) => Err(println!("interpreting error")),
+      None => Ok(()),
+    }
   }
 
   fn report(&mut self, line: i32, pos: String, message: &str) {

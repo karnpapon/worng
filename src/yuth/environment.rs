@@ -52,19 +52,6 @@ impl Environment {
     Err(EnvironmentError::EnvironmentError) // no variable found.
   }
 
-  // pub fn get_at(&self, key: &Token, distance: usize) -> Result<YuthValue, EnvironmentError> {
-  //   if distance == 0 {
-  //     return self.get_value(key);
-  //   }
-
-  //   let parent_env = self.ancestor(distance);
-
-  //   match parent_env {
-  //       Some(parent_env) => parent_env.borrow().get_value(key),
-  //       None => Err(EnvironmentError::UndefinedVariable(key.lexeme.clone())),
-  //   }
-  // }
-
   pub fn assign(&mut self, key: &String, value: YuthValue) -> Result<() , EnvironmentError>  {
     if self.values.contains_key(key) {
       self.values.insert(key.clone(), value);
@@ -77,22 +64,4 @@ impl Environment {
 
     Err(EnvironmentError::UndefinedVariable(key.clone()))
   }
-
-  // fn ancestor(&self, distance: usize) -> Option<Rc<RefCell<Environment>>> {
-  //   let mut ret_env = match self.enclosing {
-  //       Some(ref parent_env) => parent_env.clone(),
-  //       None => return None,
-  //   };
-
-  //   for _ in 1..distance {
-  //       let new_env = match ret_env.borrow().enclosing {
-  //           Some(ref parent_env) => parent_env.clone(),
-  //           None => return None,
-  //       };
-
-  //       ret_env = new_env;
-  //   }
-
-  //   Some(ret_env)
-  // }
 }

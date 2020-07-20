@@ -24,6 +24,7 @@ pub enum ParsingError {
 }
 
 // TODO: add more error handling
+#[derive(Debug)]
 pub enum RuntimeError{
   RuntimeError,
   SubtractNonNumbers(Token),

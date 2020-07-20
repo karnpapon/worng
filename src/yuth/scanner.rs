@@ -68,32 +68,32 @@ impl Scanner{
       '+' =>  self.add_token(TokenType::Plus, None),
       ';' =>  self.add_token(TokenType::Semicolon, None),
       '*' =>  {
-        if !self.get_match('/') {
+        if !self.is_match('/') {
           self.add_token(TokenType::Star, None)
         } 
       }, 
-      '!' =>  match self.get_match('=') {
+      '!' =>  match self.is_match('=') {
         true => self.add_token(TokenType::BangEqual, None),
         false => self.add_token(TokenType::Bang, None)
       },
-      '=' =>  match self.get_match('=') {
+      '=' =>  match self.is_match('=') {
         true => self.add_token(TokenType::EqualEqual, None),
         false => self.add_token(TokenType::Equal, None)
       },
-      '<' => match self.get_match('=') {
+      '<' => match self.is_match('=') {
         true => self.add_token(TokenType::LessEqual, None),
         false => self.add_token(TokenType::Less, None)
       },
-      '>' =>  match self.get_match('=') {
+      '>' =>  match self.is_match('=') {
         true => self.add_token(TokenType::GreaterEqual, None),
         false => self.add_token(TokenType::Greater, None)
       },
       '/' => {
-        if self.get_match('/') {
+        if self.is_match('/') {
           while self.peek() != '\n' && !self.is_at_end() { 
             self.advance();
           }
-        } else if self.get_match('*'){
+        } else if self.is_match('*'){
           while self.peek() != '*' && self.peek_next() != '/' && !self.is_at_end() { 
             self.advance();
           } 
@@ -176,7 +176,7 @@ impl Scanner{
     self.add_token(TokenType::String, Some(Literal::String(value)));
   }
 
-  fn get_match(&mut self, expected: char) -> bool {
+  fn is_match(&mut self, expected: char) -> bool {
     if self.is_at_end() { return false };
     if self.source[self.current] != expected {
       return false;

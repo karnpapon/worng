@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::rc::Rc;
 
 use super::statement::Stmt;
 use super::callable::Callable;
@@ -9,16 +10,18 @@ use super::error::RuntimeError;
 
 #[derive(Debug)]
 pub struct YuthFunction{
-  declaration: Stmt
+  declaration: Stmt,
+  closure: Rc<RefCell<Environment>>
 }
 
 
 impl YuthFunction{
-  pub fn new( declaration: Stmt) -> YuthFunction{
+  pub fn new( declaration: Stmt, closure: Rc<RefCell<Environment>>) -> YuthFunction{
     match declaration{
       Stmt::Func(_,_,_) => {
         YuthFunction{
-          declaration: declaration
+          declaration: declaration,
+          closure: closure
         }
       },
       _ => panic!("Cannot build a Yuth Function with a Stmt other than Stmt::Func")
@@ -31,9 +34,9 @@ impl Callable for YuthFunction{
   fn call(&self, interpreter: &mut Interpreter, args: Vec<YuthValue>) -> Result<YuthValue, RuntimeError>{
 
     // each function has it's own environment
-    // eg. recursive function has to have it's "enclosed" env, 
+    // eg. recursive function has to have it's "enclosed" environment, 
     // just to collect it's own params, at certain stage of calling function.
-    let mut environment = Environment::enclose(interpreter.globals.clone());
+    let mut environment = Environment::enclose(self.closure.clone());
 
     let (params, body)  = match self.declaration {
       Stmt::Func(ref name, ref params, ref body) => (params, body),
@@ -63,7 +66,6 @@ impl Callable for YuthFunction{
   }
 
   fn arity(&self) -> usize{
-    
     let params =  match self.declaration {
       Stmt::Func(_, ref params, _) => params.len(),
       _ => 0

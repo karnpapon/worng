@@ -13,19 +13,20 @@ pub enum Stmt {
   If(Expr, Box<Stmt>, Box<Option<Stmt>>),
   While(Expr, Box<Stmt>),
   Func(Token, Vec<Token>, Box<Stmt>),
+  Return(Token, Box<Expr>)
 }
 
 impl std::fmt::Display for Stmt {
   fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
     match *self{
       Stmt::Expr(ref expr) => {
-        write!(f, "statement expression = {}", expr)
+        write!(f, "Stmt::Expr = {}", expr)
       },
       Stmt::Print(ref expr) => {
-        write!(f, "print expresstion = {}", expr)
+        write!(f, "Stmt::Print = {}", expr)
       },
       Stmt::Var(ref token, ref expr) => {
-        write!(f, "var declaration = [token: {:?}] [value: {}]",token, expr)
+        write!(f, "Stmt::Var = [token: {:?}] [value: {}]",token, expr)
       },
       Stmt::Block(ref stmt) => {
         write!(f, "block = {:?}", &stmt)
@@ -38,6 +39,9 @@ impl std::fmt::Display for Stmt {
       },
       Stmt::Func(ref name, ref params, ref body) => {
         write!(f, "function name: {:?}, params: {:?}, body {:?} ", name, params, body)
+      },
+      Stmt::Return(ref keyword, ref value) => {
+        write!(f, "return: keyword = {:?}, value = {:?}", keyword, value)
       }
     }
   }

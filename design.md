@@ -4,6 +4,7 @@
 - add ternary operator.
 - Bitwise operator and decide to use precedence hierachy.
 - support `break` `continue` in for loop.
+- devided by zero handling.
 
 # to be decided.
 - make it runtime error if var is declare but not assign any value.

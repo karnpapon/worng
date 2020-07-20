@@ -6,6 +6,7 @@ or yuth, for short. is dynamic/esoteric language inspired by totalitarianism gov
 - no `if` statement ( inspired by branchless programming).
 - use `.yuth` as file extension.
 - no `promise` return.
+- `io` = flip value ( information operating, military terms ).
 
 ```
 syntax design.
@@ -88,12 +89,15 @@ function → IDENTIFIER "(" parameters? ")" block ;
 
 parameters → IDENTIFIER ( "," IDENTIFIER )* ;
 
-statement → expression_statement
-          | for_statement
-          | if_statement
-          | print_statement
-          | while_statement
-          | block ;
+statement  → expression_statement
+           | for_statement
+           | if_statement
+           | print_statement
+           | return_statement
+           | while_statement
+           | block_statement ;
+
+return_statement → "return" expression? ";" ;
 
 for_statement   → "for" "(" ( var_declaration | expression_statement | ";" )
                       expression? ";"

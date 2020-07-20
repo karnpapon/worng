@@ -11,7 +11,7 @@ pub enum Expr{
   Grouping(Box<Expr>),
   Var(Token, Option<usize>),
   Assign(Token, Box<Expr>, Option<usize>),
-  Logical(Box<Expr>, Token, Box<Expr>)
+  Logical(Box<Expr>, Token, Box<Expr>),
 }
 
 
@@ -44,8 +44,7 @@ impl fmt::Display for Expr {
       },
       Expr::Call(ref callee, ref paren, ref arguments) => { 
        write!(f, "Call = {}, {:?}, {:?}", callee, paren, arguments)
-      }
-
+      },
     }
   }
 }

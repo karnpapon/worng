@@ -46,28 +46,29 @@ impl Interpreter {
   pub fn interpret_statement(&mut self, statement: &Stmt) -> Result<Option<YuthValue>, RuntimeError> {
     match *statement {
       Stmt::Print(ref expr) => { 
-        return self.interpret_expression(expr)
-        .map(|value| { 
-          println!("print value = {:?}", &value);
+        return self.interpret_expression(expr).map(|value| { 
+          let msg = format!("{}\n", value);
+          print!("{}" ,&msg);
           None
          }
         )
       },
-      Stmt::Expr(ref expr) => { 
-        self.interpret_expression(expr).map(|_| None)
-      },
+      Stmt::Expr(ref expr) => { self.interpret_expression(expr).map(|_| None) },
       Stmt::Var(ref token, ref expr) => self.interpret_expression(expr).map(|value| {
         self.environment.borrow_mut().define(token.lexeme.clone(), value);
         None
       }),
-      Stmt::If(ref expr, ref then_stmt, ref else_stmt) => {
-        if self.interpret_expression(expr)?.is_truthy() {
-          self.interpret_statement(then_stmt)?;
-        } else if let Some(else_branch) = &**else_stmt {
-          self.interpret_statement(&else_branch)?;
-        }
-        Ok(None)
-      },
+      Stmt::If(ref condition, ref then_branch, ref else_branch) => {
+        self.interpret_expression(condition).and_then(|condition_result| {
+          if condition_result.is_truthy() {
+            self.interpret_statement(then_branch)
+          } else if let Some(ref else_branch) = **else_branch {
+            self.interpret_statement(else_branch)
+          } else {
+            Ok(None)
+          }
+        })
+    }
       Stmt::While(ref condition, ref body) => {
         while self.interpret_expression(condition)?.is_truthy() {
           self.interpret_statement(body)?;
@@ -80,10 +81,13 @@ impl Interpreter {
         self.interpret_block(statements, RefCell::new(env))
       },
       Stmt::Func(ref name, ref params, ref body) => {
-        let function = YuthValue::Func(Rc::new(YuthFunction::new(statement.clone()) ) );
+        let function = YuthValue::Func(Rc::new(YuthFunction::new(statement.clone(), self.environment.clone()) ) );
         self.environment.borrow_mut().define(name.clone().lexeme, function);
         return Ok(None);
-      }
+      },
+      Stmt::Return(_, ref expr) => { 
+        Ok(Some(self.interpret_expression(expr)?)) 
+      },
     }
   }
 
@@ -95,9 +99,9 @@ impl Interpreter {
     for ref stmt in statements {
       return_value = self.interpret_statement(stmt)?;
 
-      // if return_value.is_some() {
-      //   break;
-      // }
+      if return_value.is_some() {
+        break;
+      }
     }
 
     self.environment = previous;
@@ -118,10 +122,7 @@ impl Interpreter {
         let r = self.interpret_expression(right)?;
 
         match operator.token_type {
-          TokenType::Minus => { 
-            return l.subtract(r)
-                    .map_err(|_| RuntimeError::SubtractNonNumbers(operator.clone())) 
-            },
+          TokenType::Minus => return l.subtract(r) .map_err(|_| RuntimeError::SubtractNonNumbers(operator.clone())),
           TokenType::Slash => return l.divide(r).map_err(|_| RuntimeError::DivideByZero(operator.clone())),
           TokenType::Star => return l.multiply(r).map_err(|_| RuntimeError::SubtractNonNumbers(operator.clone())),
           TokenType::Plus => return l.add(r).map_err(|_| RuntimeError::AddNonNumbers(operator.clone())),
@@ -183,17 +184,6 @@ impl Interpreter {
         for argument in arguments { 
           _arguments.push(self.interpret_expression(argument)?);
         }
-
-        // match function {
-        //   Ok(func) => {
-        //     if let YuthValue::Func(ref _func) = func {
-        //       if arguments.len() != _func.arity() {
-        //         return Err(RuntimeError::ArityError(_func.arity(), arguments.len())); 
-        //       }
-        //     }
-        //   },
-        //   Err(e) => return Err(RuntimeError::RuntimeError)
-        // }
 
         if arguments.len() != function.arity() {
           return Err(RuntimeError::ArityError(function.arity(), arguments.len())); 
