@@ -7,5 +7,6 @@
 - devided by zero handling.
 
 # to be decided.
+- anonymous function ( lambda function ).
 - make it runtime error if var is declare but not assign any value.
 - add comma operator.

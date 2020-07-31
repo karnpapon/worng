@@ -1,6 +1,7 @@
 use std::rc::Rc;
 use std::cell::RefCell;
 use std::error::{Error};
+use std::collections::HashMap;
 
 use super::expr::Expr;
 use super::token_type::TokenType;
@@ -9,11 +10,13 @@ use super::yuth::{YuthValue};
 use super::statement::Stmt;
 use super::error::{YuthError, ParsingError, RuntimeError };
 use super::yuth_function::YuthFunction;
+use super::yuth_class::YuthClass;
 use super::environment::Environment;
 
 pub struct Interpreter{
   pub globals: Rc<RefCell<Environment>>,
-  environment: Rc<RefCell<Environment>>
+  environment: Rc<RefCell<Environment>>,
+  locals: HashMap<Expr, usize>
 }
 
 impl Interpreter {
@@ -23,7 +26,8 @@ impl Interpreter {
 
     Interpreter{
       globals: globals.clone(),
-      environment: globals.clone()
+      environment: globals.clone(),
+      locals: HashMap::new()
     }
   }
 
@@ -88,6 +92,12 @@ impl Interpreter {
       Stmt::Return(_, ref expr) => { 
         Ok(Some(self.interpret_expression(expr)?)) 
       },
+      Stmt::Class(ref name, ref methods ) => {
+        self.environment.borrow_mut().define(name.lexeme.clone(), YuthValue::Nil);
+        let klass = YuthClass::new(name.lexeme.clone());
+        self.environment.borrow_mut().assign(&name.lexeme, YuthValue::Class(Rc::new(klass) )).expect("class assign error");
+        return Ok(None);
+      }
     }
   }
 
@@ -148,17 +158,38 @@ impl Interpreter {
           _ => return Err(RuntimeError::InternalError("invalid operator for unary.".to_string()))
         }
       },
-      Expr::Var(ref token, ref value) => {
-        match self.environment.borrow().get_value(&token) {
-          Ok(value) => Ok(value.clone()),
-          Err(_) => Err(RuntimeError::RuntimeError)
+      Expr::Var(ref token, ref distance) => {
+
+        // resolve here 
+        match distance {
+          Some(d) => {
+            // get_at here.
+            match self.environment.borrow_mut().get_at(*d, &token) {
+              Ok(value) => Ok(value.clone()),
+              Err(_) => Err(RuntimeError::RuntimeError)
+            }
+          },
+          None => {
+            match self.globals.borrow().get_value(&token) {
+              Ok(value) => Ok(value.clone()),
+              Err(_) => Err(RuntimeError::RuntimeError)
+            }
+          }
         }
+        
       },
-      Expr::Assign(ref token, ref expr, ref value) => {
-        let val = self.interpret_expression(expr)?;
-        match self.environment.borrow_mut().assign(&token.lexeme,val.clone()){
-          Ok(()) => Ok(val),
-          Err(e) => Err(RuntimeError::UndefinedVariable(token.clone())),
+      Expr::Assign(ref token, ref expr, ref distance) => {
+        let value = self.interpret_expression(expr)?;
+
+        match distance {
+          &Some(d) => match self.environment.borrow_mut().assign_at(d, &token, value.clone()) {
+            Ok(()) => Ok(value.clone()),
+            Err(_) => Err(RuntimeError::UndefinedVariable(token.clone())),
+          },
+          &None => match self.globals.borrow_mut().assign(&token.lexeme, value.clone()){
+            Ok(()) => Ok(value.clone()),
+            Err(_) => Err(RuntimeError::UndefinedVariable(token.clone())),
+          }
         }
       },
       Expr::Logical(ref left, ref token, ref right) => {

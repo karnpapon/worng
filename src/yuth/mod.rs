@@ -12,3 +12,6 @@ pub mod environment;
 pub mod callable;
 pub mod native_function;
 pub mod yuth_function;
+pub mod yuth_instance;
+pub mod yuth_class;
+pub mod resolver;

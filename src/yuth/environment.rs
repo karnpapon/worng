@@ -52,6 +52,35 @@ impl Environment {
     Err(EnvironmentError::EnvironmentError) // no variable found.
   }
 
+  pub fn get_at(&mut self, distance: usize, key: &Token) -> Result<YuthValue, EnvironmentError> {
+
+    if distance == 0 {
+      return self.get_value(key);
+    }
+
+    let val = match self.ancestor(distance){
+      Some(enclosed_scope) => { enclosed_scope.borrow().get_value(key) },
+      None => Err(EnvironmentError::UndefinedVariable(key.lexeme.clone())),
+    };
+    val
+  }
+
+  fn ancestor(&mut self, distance: usize) -> Option<Rc<RefCell<Environment>>> {
+    let mut ancestor = match self.enclosing {
+      Some(ref enclosed_env) => enclosed_env.clone(),
+      None => return None,
+    };
+
+    for i in 0..distance {
+      let new_env = match ancestor.borrow().enclosing {
+        Some(ref parent_env) => parent_env.clone(),
+        None => return None,
+    };
+      ancestor = new_env;
+    }
+    Some(ancestor)
+  }
+
   pub fn assign(&mut self, key: &String, value: YuthValue) -> Result<() , EnvironmentError>  {
     if self.values.contains_key(key) {
       self.values.insert(key.clone(), value);
@@ -63,5 +92,16 @@ impl Environment {
     }
 
     Err(EnvironmentError::UndefinedVariable(key.clone()))
+  }
+
+  pub fn assign_at(&mut self, distance: usize, key: &Token, value: YuthValue) -> Result<(), EnvironmentError> {
+    if distance == 0 {
+      return self.assign(&key.lexeme, value);
+    }
+
+    match self.ancestor(distance){
+      Some(ref mut enclosed_env) => enclosed_env.borrow_mut().assign(&key.lexeme, value) ,
+      None => Err(EnvironmentError::UndefinedVariable(key.lexeme.clone())),
+    }
   }
 }

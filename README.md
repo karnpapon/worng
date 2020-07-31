@@ -1,41 +1,6 @@
 # Youth Programming Language.
 
 
-or yuth, for short. is dynamic/esoteric language inspired by totalitarianism gov.
-- no falsey statement ( use double truthy as falsey statement instead) eg. false = yesyes.
-- no `if` statement ( inspired by branchless programming).
-- use `.yuth` as file extension.
-- no `promise` return.
-- `io` = flip value ( information operating, military terms ).
-
-```
-syntax design.
-
-function = rule
-true = yes
-false = yesyes
-print = yell
-
--------------
-
-eg.
-
-rule hello_people!(){
-  var mini_heart = 💕;
-  yell "hello, people!, { $mini_heart } ";
-}
-
-rule add!(a, b){
-  return a + b;
-}
-
-rule run_function_inside_function!(){
-  do hello_people!();
-}
-
-rule get_human_brain_cell!(){
-  return 86000;
-}
 
 ```
 
@@ -80,13 +45,15 @@ operator   → "==" | "!=" | "<" | "<=" | ">" | ">="
 
 program     → declaration* EOF ;
 
-declaration → function_declaration
+declaration → class_declaration
+            | function_declaration
             | var_declaration
-            | statement 
+            | statement ;
+
+class_declaration   → "class" IDENTIFIER "{" function* "}" ;
 
 function_declaration  → "fun" function ;
 function → IDENTIFIER "(" parameters? ")" block ;
-
 parameters → IDENTIFIER ( "," IDENTIFIER )* ;
 
 statement  → expression_statement
@@ -122,7 +89,7 @@ multiplication → unary ( ( "/" | "*" ) unary )* ;
 
 
 unary → ( "!" | "-" ) unary | call ;
-call  → primary ( "(" arguments? ")" )* ;
+call → primary ( "(" arguments? ")" | "." IDENTIFIER )* ;
 
 arguments → expression ( "," expression )* ;    // eg (arg1, arg2) or more args.
 

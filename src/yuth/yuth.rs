@@ -16,6 +16,9 @@ use super::callable::Callable;
 use super::parser::Parser;
 use super::interpreter::Interpreter;
 use super::expr::Expr;
+use super::resolver::Resolver;
+use super::yuth_class::YuthClass;
+use super::yuth_instance::YuthInstance;
 use super::error::{ YuthError, ValueError, RuntimeError };
 
 #[derive(Debug)]
@@ -30,6 +33,8 @@ pub enum YuthValue {
   String(String),
   Bool(bool),
   Func(Rc<dyn Callable>),
+  Class(Rc<YuthClass>),
+  Instance(YuthInstance),
   Nil,
 }
 
@@ -40,6 +45,8 @@ impl std::fmt::Display for YuthValue {
       YuthValue::String(ref string) => write!(f, "{}", string),
       YuthValue::Bool(b) => write!(f, "{}", b),
       YuthValue::Func(_) => f.write_str("func"),
+      YuthValue::Class(ref name) => write!(f,"{}", name),
+      YuthValue::Instance(ref klass) => write!(f,"Instance: {}", klass),
       YuthValue::Nil => f.write_str("nil"),
     }
   }
@@ -53,6 +60,8 @@ impl std::clone::Clone for YuthValue {
       YuthValue::Bool(b) => YuthValue::Bool(b),
       YuthValue::Nil => YuthValue::Nil,
       YuthValue::Func(ref func) => YuthValue::Func(func.clone()),
+      YuthValue::Class(ref class) => YuthValue::Class(class.clone()),
+      YuthValue::Instance(ref klass) => YuthValue::Instance(klass.clone()),
     }
   }
 }
@@ -114,10 +123,13 @@ impl Yuth {
     
     let mut parser = Parser::new(tokens);
 
-    let expression: Vec<Stmt> = parser.parse().unwrap();
+    let mut expression: Vec<Stmt> = parser.parse().unwrap();
     let mut interpreter = Interpreter::new();
 
     // if self.had_error { return };
+
+    let mut resolver = Resolver::new();
+    resolver.resolve(&mut expression);
 
     match interpreter.interpret(expression) {
       Some(err) => Err(println!("interpreting error")),
@@ -180,6 +192,9 @@ impl YuthValue {
     match(self, other){
       (&YuthValue::Number(left), YuthValue::Number(right)) => {
         Ok(YuthValue::Number(left * right))
+      },
+      (&YuthValue::Number(left), YuthValue::Bool(right)) => {
+        Ok(YuthValue::Number(left * (right as i32 as f64) ))
       },
       _ => Err(ValueError::TypeError)
     }
@@ -274,6 +289,7 @@ impl YuthValue {
   pub fn get_callable(&self) -> Option<Rc<dyn Callable>> {
     match *self {
       YuthValue::Func(ref func) => Some(func.clone()),
+      YuthValue::Class(ref klass) => Some(klass.clone()),
       _ => None,
     }
   }
