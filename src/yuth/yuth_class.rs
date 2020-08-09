@@ -1,18 +1,33 @@
+use std::rc::Rc;
+use std::cell::RefCell;
+use std::collections::HashMap;
+
 use super::callable::Callable;
 use super::interpreter::Interpreter;
-use super::error::RuntimeError;
+use super::error::{ RuntimeError, YuthError, ValueError };
 use super::yuth::YuthValue;
+use super::token::Token;
+use super::yuth_function::YuthFunction;
 use super::yuth_instance::YuthInstance;
 
 #[derive(Debug, Clone)]
 pub struct YuthClass {
-  name: String
+  name: String,
+  methods: HashMap<String, YuthFunction>
 }
 
 impl YuthClass {
-  pub fn new(name: String) -> YuthClass {
+  pub fn new(name: String, methods: HashMap<String, YuthFunction>) -> YuthClass {
     YuthClass {
-      name: name
+      name: name,
+      methods: methods
+    }
+  }
+
+  pub fn find_method(&self, name: Token) -> Result<YuthFunction, RuntimeError> {
+    match self.methods.get(&name.lexeme) {
+      Some(method) => Ok(method.clone()),
+      None => Err(RuntimeError::UndefinedVariable(name))
     }
   }
 }
@@ -32,7 +47,7 @@ impl Callable for YuthClass {
     -> Result<YuthValue, RuntimeError>{
 
       let instance = YuthInstance::new(self.clone());
-      return Ok(YuthValue::Instance(instance));
+      return Ok(YuthValue::Instance(Rc::new( RefCell::new( instance )) ));
   }
 
   fn arity(&self)  -> usize{

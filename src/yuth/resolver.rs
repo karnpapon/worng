@@ -8,7 +8,8 @@ use super::token::{ Token, Literal };
 
 #[derive(Clone)]
 enum FunctionType {
-  FUNCTION
+  FUNCTION,
+  METHOD
 }
 
 /// basically, Resolver is to figure out how many "distance" the variables in the "scope" are.
@@ -55,6 +56,12 @@ impl Resolver {
       Stmt::Class(ref name, ref methods) => {
         self.declare(name);
         self.define(name);
+
+        for mut method in methods.clone() {
+          if let Stmt::Func(_, ref params, ref mut body ) = method {
+            self.resolve_function(params, body, Some(FunctionType::METHOD)); 
+          }
+        }
       },
       Stmt::Expr(ref mut expr) => {
         self.resolve_expression(expr);
@@ -134,6 +141,13 @@ impl Resolver {
         for argument in arguments {
           self.resolve_expression(argument);
         }
+      },
+      Expr::Get(ref mut obj, ref name) => {
+        self.resolve_expression( obj )
+      },
+      Expr::Set(ref mut object, ref name, ref mut value) => {
+        self.resolve_expression(value);
+        self.resolve_expression(object);
       },
       Expr::Grouping(ref mut expression) => {
         self.resolve_expression(expression);

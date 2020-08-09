@@ -8,7 +8,7 @@ use super::environment::Environment;
 use super::yuth::YuthValue;
 use super::error::RuntimeError;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct YuthFunction{
   declaration: Stmt,
   closure: Rc<RefCell<Environment>>

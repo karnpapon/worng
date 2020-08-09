@@ -8,9 +8,11 @@ pub enum Expr{
   Literal(Literal),
   Binary(Box<Expr>,Token,Box<Expr>),
   Call(Box<Expr>, Token, Vec<Expr>),
+  Get(Box<Expr>, Token),
   Grouping(Box<Expr>),
   Var(Token, Option<usize>),
   Assign(Token, Box<Expr>, Option<usize>),
+  Set(Box<Expr>, Token, Box<Expr>),
   Logical(Box<Expr>, Token, Box<Expr>),
 }
 
@@ -29,7 +31,9 @@ impl fmt::Display for Expr {
       Expr::Grouping(ref expression) => {
         write!(f, "(group {})", expression) 
       }, 
-
+      Expr::Get(ref object, ref name) => {
+        write!(f, "get obj = {}, name = {}", object, name.lexeme) 
+      }, 
       Expr::Literal(ref expression) => {
         write!(f, "{}", expression) 
       },
@@ -38,6 +42,9 @@ impl fmt::Display for Expr {
       },
       Expr::Assign(ref token, ref expr, _) => { 
        write!(f, "(assign {} {})", token.lexeme, expr)
+      },
+      Expr::Set(ref object, ref name, ref value) => { 
+       write!(f, "set {} {} to value: {}", object, name.lexeme , value )
       },
       Expr::Logical(ref left, ref token, ref right) => { 
        write!(f, "Logical = ({} {} {})", left, token.lexeme, right)

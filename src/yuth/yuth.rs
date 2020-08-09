@@ -4,6 +4,7 @@ use std::path::Path;
 use std::error::{Error};
 use std::ops::Sub;
 use std::rc::Rc;
+use std::cell::RefCell;
 
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
@@ -34,7 +35,7 @@ pub enum YuthValue {
   Bool(bool),
   Func(Rc<dyn Callable>),
   Class(Rc<YuthClass>),
-  Instance(YuthInstance),
+  Instance(Rc<RefCell<YuthInstance>>),
   Nil,
 }
 
@@ -46,7 +47,7 @@ impl std::fmt::Display for YuthValue {
       YuthValue::Bool(b) => write!(f, "{}", b),
       YuthValue::Func(_) => f.write_str("func"),
       YuthValue::Class(ref name) => write!(f,"{}", name),
-      YuthValue::Instance(ref klass) => write!(f,"Instance: {}", klass),
+      YuthValue::Instance(ref klass) => write!(f,"Instance: {}", klass.borrow()),
       YuthValue::Nil => f.write_str("nil"),
     }
   }

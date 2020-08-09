@@ -77,8 +77,10 @@ expression      → assignment ;
 print_statement → "print" expression ";" ;
 block           → "{" declaration* "}" ;
 
-assignment → identifier "=" assignment
+
+assignment → ( call "." )? IDENTIFIER "=" assignment
            | logic_or ;
+    
 logic_or   → logic_and ( "or" logic_and )* ;
 logic_and  → equality ( "and" equality )* ;
 

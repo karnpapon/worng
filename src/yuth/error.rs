@@ -9,6 +9,7 @@ pub enum YuthError{
 // TODO: add more error handling
 pub enum ValueError {
   TypeError,
+  // UndefinedMethod(String)
 }
 
 // TODO: add more error handling
@@ -94,6 +95,18 @@ impl std::fmt::Display for RuntimeError {
       RuntimeError::CallOnNonCallable(ref token ) => {
         write!(f,  "call on non-callable: {}.", token.lexeme )
       }
+    }
+  }
+}
+impl std::fmt::Display for ValueError {
+  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    match *self{
+      ValueError::TypeError => {
+        write!(f, "type error")
+      },
+      // ValueError::UndefinedMethod(ref method) => {
+      //   write!(f, "undefined method: {}", method)
+      // },
     }
   }
 }

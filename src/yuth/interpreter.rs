@@ -94,7 +94,27 @@ impl Interpreter {
       },
       Stmt::Class(ref name, ref methods ) => {
         self.environment.borrow_mut().define(name.lexeme.clone(), YuthValue::Nil);
-        let klass = YuthClass::new(name.lexeme.clone());
+        let mut _methods: HashMap<String, YuthFunction> = HashMap::new();
+
+        for method_stmt in methods {
+          match method_stmt {
+            &Stmt::Func(ref name, _, _) => {
+                let method = YuthFunction::new(
+                  method_stmt.clone(),
+                    self.environment.clone(),
+                    // name.lexeme == "init",
+                );
+                _methods.insert(name.lexeme.clone(), method);
+            }
+            _ => {
+              return Err(RuntimeError::InternalError(
+                "Found a non Stmt::Func as a method of a class".to_string(),
+              ))
+            }
+          };
+        };
+
+        let klass = YuthClass::new(name.lexeme.clone(), _methods);
         self.environment.borrow_mut().assign(&name.lexeme, YuthValue::Class(Rc::new(klass) )).expect("class assign error");
         return Ok(None);
       }
@@ -222,6 +242,25 @@ impl Interpreter {
 
         return function.call(self, _arguments);
       },
+      Expr::Get(ref obj, ref name) => {
+        let object = self.interpret_expression(obj).unwrap();
+        match object {
+          YuthValue::Instance( ob ) => Ok(ob.borrow().get(name.clone()).unwrap() ),
+          _ => { Err(RuntimeError::RuntimeError) } // TODO: msg = "Only instances have properties.""
+        }
+      },
+      Expr::Set(ref object, ref name, ref value) => {
+        let object = self.interpret_expression(object).unwrap();
+
+        match object {
+          YuthValue::Instance(ref klass) => {
+            let _value = self.interpret_expression(value).unwrap();
+            klass.borrow_mut().set(name.clone(), _value.clone()); 
+            Ok(_value)
+          },
+          _ => { Err(RuntimeError::RuntimeError)} // TODO: msg = ""Only instances have fields. "
+        }
+      }
     }
   }
 }

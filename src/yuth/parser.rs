@@ -265,6 +265,9 @@ impl Parser{
         Expr::Var( token, _) => {
           return Ok(Expr::Assign(token, Box::new(value), None ));
         },
+        Expr::Get( ref object, ref name) => {
+          return Ok( Expr::Set(object.clone(), name.clone(), Box::new(value)))
+        },
         _ => return Err(ParsingError::InvalidAssignmentError(equals))
       }
     }
@@ -368,6 +371,9 @@ impl Parser{
     loop { 
       if self.is_match(vec![TokenType::LeftParen]) {
         expr = self.finish_call(expr?);
+      } else if self.is_match(vec![TokenType::Dot]){  
+        let name = self.consume(TokenType::Identifier, "Expect property name after '.'." );
+        expr = Ok(Expr::Get(Box::new(expr?), name? ));
       } else {
         break;
       }
