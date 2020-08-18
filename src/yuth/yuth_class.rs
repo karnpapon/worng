@@ -1,6 +1,7 @@
 use std::rc::Rc;
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::any::Any;
 
 use super::callable::Callable;
 use super::interpreter::Interpreter;
@@ -13,23 +14,30 @@ use super::yuth_instance::YuthInstance;
 #[derive(Debug, Clone)]
 pub struct YuthClass {
   name: String,
-  methods: HashMap<String, YuthFunction>
+  methods: HashMap<String, YuthValue>
 }
 
 impl YuthClass {
-  pub fn new(name: String, methods: HashMap<String, YuthFunction>) -> YuthClass {
+  pub fn new(name: String, methods: HashMap<String, YuthValue>) -> YuthClass {
     YuthClass {
       name: name,
       methods: methods
     }
   }
 
-  pub fn find_method(&self, name: Token) -> Result<YuthFunction, RuntimeError> {
-    match self.methods.get(&name.lexeme) {
-      Some(method) => Ok(method.clone()),
-      None => Err(RuntimeError::UndefinedVariable(name))
-    }
-  }
+  pub fn find_method(&self, name: &str, instance: Rc<RefCell<YuthInstance>>) -> Option<YuthFunction> {
+    self.methods
+        .get(name)
+        .map(|method| method.clone())
+        .map(|method| match method {
+            YuthValue::Func(ref callable) => callable
+                .as_any()
+                .downcast_ref::<YuthFunction>()
+                .expect("Couldn't cast Callable to YuthFunc in YuthValue::Function")
+                .bind(instance.clone()),
+            _ => panic!("Can't get non-func as method from an instance"),
+        })
+}
 }
 
 impl std::fmt::Display for YuthClass {
@@ -55,5 +63,9 @@ impl Callable for YuthClass {
   }
   fn func_to_string(&self) -> String {
     return String::from("class func_to_string")
+  }
+
+  fn as_any(&self) -> &dyn Any{
+    self
   }
 }

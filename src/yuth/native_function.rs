@@ -1,4 +1,6 @@
 use std::time::{SystemTime, UNIX_EPOCH};
+use std::any::Any;
+
 
 use super::callable::Callable;
 use super::yuth::YuthValue;
@@ -32,6 +34,10 @@ impl Callable for NativeClock {
 
   fn func_to_string(&self) -> String{
     String::from("<native function>")
+  }
+
+  fn as_any(&self) -> &dyn Any{
+    self
   }
 }
 

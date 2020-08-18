@@ -1,11 +1,13 @@
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::any::Any;
 
 use super::statement::Stmt;
 use super::callable::Callable;
 use super::interpreter::Interpreter;
 use super::environment::Environment;
 use super::yuth::YuthValue;
+use super::yuth_instance::YuthInstance;
 use super::error::RuntimeError;
 
 #[derive(Debug, Clone)]
@@ -25,6 +27,15 @@ impl YuthFunction{
         }
       },
       _ => panic!("Cannot build a Yuth Function with a Stmt other than Stmt::Func")
+    }
+  }
+
+  pub fn bind(&self, instance: Rc<RefCell<YuthInstance>>) -> YuthFunction {
+    let mut env = Environment::enclose(self.closure.clone());
+    env.define("this".to_string(), YuthValue::Instance(instance.clone()));
+    YuthFunction {
+      declaration: self.declaration.clone(),
+      closure: Rc::new(RefCell::new(env)),
     }
   }
 }
@@ -78,4 +89,9 @@ impl Callable for YuthFunction{
   fn func_to_string(&self) -> String{
     String::from("<function>")
   }
+
+  fn as_any(&self) -> &dyn Any{
+    self
+  }
 }
+

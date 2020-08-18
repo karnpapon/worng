@@ -6,6 +6,12 @@ use super::error::RuntimeError;
 use super::expr::Expr;
 use super::token::{ Token, Literal };
 
+
+#[derive(Clone, PartialEq)]
+enum ClassType {
+  Class,
+}
+
 #[derive(Clone)]
 enum FunctionType {
   FUNCTION,
@@ -19,6 +25,7 @@ enum FunctionType {
 /// it's only job is to "run once".
 pub struct Resolver {
   scopes: Vec<HashMap<String, bool>>,
+  class_type: Option<ClassType>,
   current_function: Option<FunctionType>
 }
 
@@ -26,6 +33,7 @@ impl Resolver {
   pub fn new() -> Resolver {
     Resolver{
       scopes: Vec::new(),
+      class_type: None,
       current_function: None
     }
   }
@@ -46,22 +54,44 @@ impl Resolver {
       Stmt::Var(ref token, ref mut expr) => {
         self.declare(token);
         self.resolve_expression(expr);
-        self.define(token);
+        self.define(token.lexeme.clone());
       },
       Stmt::Func(ref name, ref params, ref mut body) => {
         self.declare(name);
-        self.define(name);
+        self.define(name.lexeme.clone());
         self.resolve_function(params, body, Some(FunctionType::FUNCTION) );
       },
-      Stmt::Class(ref name, ref methods) => {
+      Stmt::Class(ref name, ref mut methods) => {
         self.declare(name);
-        self.define(name);
 
-        for mut method in methods.clone() {
-          if let Stmt::Func(_, ref params, ref mut body ) = method {
-            self.resolve_function(params, body, Some(FunctionType::METHOD)); 
+        let enclosing_class_type = self.class_type.clone();
+        self.class_type = Some(ClassType::Class);
+
+        self.begin_scope();
+        self.define("this".to_string());
+
+        // for method in methods {
+        //   if let Stmt::Func(_, ref params, ref mut body ) = method {
+        //     self.resolve_function(params, body, Some(FunctionType::METHOD)); 
+        //   }
+        // }
+
+        for method in methods {
+          match method {
+            &mut Stmt::Func(ref token, ref params, ref mut body) => {
+                self.declare(token);
+                self.define(name.lexeme.clone());
+                let function_type = FunctionType::METHOD;
+
+                self.resolve_function(params, body, Some(function_type));
+            }
+            _ => {}
           }
         }
+
+        self.end_scope();
+        self.class_type = enclosing_class_type;
+        self.define(name.lexeme.clone());
       },
       Stmt::Expr(ref mut expr) => {
         self.resolve_expression(expr);
@@ -101,7 +131,7 @@ impl Resolver {
     self.begin_scope();
     for param in params {
       self.declare(&param);
-      self.define(&param);
+      self.define(param.lexeme.clone());
     }
 
     match body {
@@ -159,6 +189,21 @@ impl Resolver {
       },
       Expr::Unary(_, ref mut right) => {
         self.resolve_expression(right);
+      },
+      Expr::This(ref token, ref mut distance ) => {
+        if self.class_type.is_none() {
+          panic!("UnexpectedTokenError: Cannot use `this` outside of a method.");
+        }
+
+        if let Some(scope) = self.scopes.last() {
+          if let Some(is_var_available) = scope.get(&token.lexeme) {
+            if !is_var_available {
+              // println!("error variable not available in scope.")
+            }
+          }
+        }
+        *distance =  self.resolve_local(token.lexeme.to_string());
+        println!("resolve distance -> {:?}", distance);
       }
     }
 
@@ -176,9 +221,7 @@ impl Resolver {
 
   
   fn begin_scope(&mut self) {
-    let mut body = HashMap::new();
-    body.insert(String::new(), false);
-    self.scopes.push(body);
+    self.scopes.push(HashMap::new());
   }
 
   fn end_scope(&mut self) {
@@ -191,9 +234,9 @@ impl Resolver {
     }
   }
 
-  fn define(&mut self, name: &Token) {
+  fn define(&mut self, name: String) {
     if let Some(scope) = self.scopes.last_mut() {
-      scope.insert(name.lexeme.clone(), false);
+      scope.insert(name.clone(), true);
     }
   }
 }

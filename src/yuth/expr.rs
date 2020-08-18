@@ -14,6 +14,7 @@ pub enum Expr{
   Assign(Token, Box<Expr>, Option<usize>),
   Set(Box<Expr>, Token, Box<Expr>),
   Logical(Box<Expr>, Token, Box<Expr>),
+  This(Token, Option<usize>)
 }
 
 
@@ -52,6 +53,9 @@ impl fmt::Display for Expr {
       Expr::Call(ref callee, ref paren, ref arguments) => { 
        write!(f, "Call = {}, {:?}, {:?}", callee, paren, arguments)
       },
+      Expr::This(ref keyword, _) => {
+        write!(f, "this = {}", keyword.lexeme)
+      }
     }
   }
 }

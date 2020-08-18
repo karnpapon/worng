@@ -94,7 +94,7 @@ impl Parser{
       while self.is_match(vec![TokenType::Comma]){
         if parameters.len() >= 10 {
           // error(self.peek(), "Cannot have more than 255 parameters.");
-          println!("Cannot have more than 255 parameters.");
+          println!("Cannot have more than 10 parameters.");
         }
         parameters.push(self.consume(TokenType::Identifier, "Expect parameter name.")?);
       }
@@ -107,7 +107,7 @@ impl Parser{
 
   fn  class_declaration(&mut self) -> Result<Stmt, ParsingError> {
     let name = self.consume(TokenType::Identifier, "Expect class name.")?;
-    self.consume(TokenType::LeftBrace, "Expect '{' before class body.");
+    self.consume(TokenType::LeftBrace, "Expect '{' before class body.")?;
 
     let mut methods: Vec<Stmt> = Vec::new();
 
@@ -115,7 +115,7 @@ impl Parser{
       methods.push(self.function_declaration("method")?);
     }
 
-    self.consume(TokenType::RightBrace, "Expect '}' after class body.");
+    self.consume(TokenType::RightBrace, "Expect '}' after class body.")?;
 
     return Ok(Stmt::Class(name, methods));
   }
@@ -259,7 +259,7 @@ impl Parser{
 
     if self.is_match(vec![TokenType::Equal]) {
       let equals =  self.previous().clone();
-      let value = self.assignment().unwrap();
+      let value = self.assignment()?;
 
       match expr {
         Expr::Var( token, _) => {
@@ -412,6 +412,10 @@ impl Parser{
 
     if self.is_match(vec![TokenType::Identifier]){
       return Ok(Expr::Var(self.previous().clone(), None));
+    }
+
+    if self.is_match(vec![TokenType::This]){
+      return Ok(Expr::This(self.previous().clone(), None));
     }
     
     if self.is_match(vec![TokenType::LeftParen]) {

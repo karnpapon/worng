@@ -27,12 +27,15 @@ pub enum ParsingError {
 // TODO: add more error handling
 #[derive(Debug)]
 pub enum RuntimeError{
-  RuntimeError,
+  RuntimeError(Token),
   SubtractNonNumbers(Token),
   AddNonNumbers(Token),
   DivideByZero(Token),
+  DivideInvalidType,
   InternalError(String),
+  InvalidGetTarget(Token),
   UndefinedVariable(Token),
+  UndefinedProperty(Token),
   ArityError(usize, usize),
   CallOnNonCallable(Token)
 }
@@ -71,8 +74,8 @@ impl std::error::Error for EnvironmentError {
 impl std::fmt::Display for RuntimeError {
   fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
     match *self{
-      RuntimeError::RuntimeError => {
-        write!(f, "runtime error")
+      RuntimeError::RuntimeError(ref expression) => {
+        write!(f, "[Line: {}] runtime error", expression.line)
       },
       RuntimeError::SubtractNonNumbers(ref expression) => {
         write!(f, "[Line: {}] subtract non-number: {}", expression.line, expression.lexeme)
@@ -88,6 +91,15 @@ impl std::fmt::Display for RuntimeError {
       },
       RuntimeError::UndefinedVariable(ref token) => {
         write!(f,  "[line {}] Undefined variable -> {}", token.line, token.lexeme)
+      },
+      RuntimeError::DivideInvalidType => {
+        write!(f,  "divide invalid type")
+      },
+      RuntimeError::InvalidGetTarget(ref token) => {
+        write!(f,  "invalid get target")
+      },
+      RuntimeError::UndefinedProperty(ref token) => {
+        write!(f,  "[line {}] Undefined property -> {}", token.line, token.lexeme)
       },
       RuntimeError::ArityError(ref expected, ref size ) => {
         write!(f,  "Expected {} arguments but got {}.", expected, size )

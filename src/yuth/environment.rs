@@ -52,7 +52,7 @@ impl Environment {
     Err(EnvironmentError::EnvironmentError) // no variable found.
   }
 
-  pub fn get_at(&mut self, distance: usize, key: &Token) -> Result<YuthValue, EnvironmentError> {
+  pub fn get_at(&self, distance: usize, key: &Token) -> Result<YuthValue, EnvironmentError> {
 
     if distance == 0 {
       return self.get_value(key);
@@ -65,13 +65,14 @@ impl Environment {
     val
   }
 
-  fn ancestor(&mut self, distance: usize) -> Option<Rc<RefCell<Environment>>> {
+  fn ancestor(&self, distance: usize) -> Option<Rc<RefCell<Environment>>> {
     let mut ancestor = match self.enclosing {
       Some(ref enclosed_env) => enclosed_env.clone(),
       None => return None,
     };
 
-    for i in 0..distance {
+    // stuck in this for awhilee (change from 0..distance)
+    for _ in 1..distance {
       let new_env = match ancestor.borrow().enclosing {
         Some(ref parent_env) => parent_env.clone(),
         None => return None,

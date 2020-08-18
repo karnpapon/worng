@@ -133,7 +133,7 @@ impl Yuth {
     resolver.resolve(&mut expression);
 
     match interpreter.interpret(expression) {
-      Some(err) => Err(println!("interpreting error")),
+      Some(err) => Err(println!("interpreting error: {}", err)),
       None => Ok(()),
     }
   }
@@ -180,12 +180,12 @@ impl YuthValue {
   pub fn divide(&self, other: YuthValue) -> Result<YuthValue, YuthError>{
     match(self, other) {
       (&YuthValue::Number(left), YuthValue::Number(0.0)) => {
-        Err(YuthError::RuntimeError(RuntimeError::RuntimeError))
+        Err(YuthError::RuntimeError(RuntimeError::DivideInvalidType))
       },
       (&YuthValue::Number(left), YuthValue::Number(right)) => {
         Ok(YuthValue::Number(left / right))
       },
-      _ => Err(YuthError::RuntimeError(RuntimeError::RuntimeError) )
+      _ => Err(YuthError::RuntimeError(RuntimeError::DivideInvalidType) )
     }
   }
 

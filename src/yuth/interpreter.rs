@@ -92,32 +92,66 @@ impl Interpreter {
       Stmt::Return(_, ref expr) => { 
         Ok(Some(self.interpret_expression(expr)?)) 
       },
-      Stmt::Class(ref name, ref methods ) => {
-        self.environment.borrow_mut().define(name.lexeme.clone(), YuthValue::Nil);
-        let mut _methods: HashMap<String, YuthFunction> = HashMap::new();
+      Stmt::Class(ref token, ref method_statements) => {
+        let mut methods = HashMap::new();
 
-        for method_stmt in methods {
-          match method_stmt {
-            &Stmt::Func(ref name, _, _) => {
-                let method = YuthFunction::new(
-                  method_stmt.clone(),
-                    self.environment.clone(),
-                    // name.lexeme == "init",
-                );
-                _methods.insert(name.lexeme.clone(), method);
-            }
-            _ => {
-              return Err(RuntimeError::InternalError(
-                "Found a non Stmt::Func as a method of a class".to_string(),
-              ))
-            }
-          };
-        };
+        for method_statement in method_statements {
+            match method_statement {
+                &Stmt::Func(ref name, _, _) => {
+                    let method = YuthValue::Func(Rc::new(YuthFunction::new(
+                        method_statement.clone(),
+                        self.environment.clone(),
+                    )));
+                    methods.insert(name.lexeme.clone(), method);
+                }
+                _ => {
+                    return Err(RuntimeError::InternalError(
+                        "Found a non Stmt::Func as a method of a class".to_string(),
+                    ))
+                }
+            };
+        }
 
-        let klass = YuthClass::new(name.lexeme.clone(), _methods);
-        self.environment.borrow_mut().assign(&name.lexeme, YuthValue::Class(Rc::new(klass) )).expect("class assign error");
-        return Ok(None);
-      }
+        let class = YuthValue::Class(Rc::new(YuthClass::new(
+            token.lexeme.clone(),
+            methods,
+        )));
+
+        self.environment.borrow_mut().define(token.lexeme.clone(), class);
+
+        Ok(None)
+      },
+      // Stmt::Class(ref name, ref methods ) => {
+      //   self.environment.borrow_mut().define(name.lexeme.clone(), YuthValue::Nil);
+      //   let mut methods_statements = HashMap::new();
+
+      //   for method_stmt in methods {
+      //     match method_stmt {
+      //       &Stmt::Func(ref name, _, _) => {
+      //           let _method = YuthValue::Func(Rc::new(YuthFunction::new(
+      //             method_stmt.clone(),
+      //               self.environment.clone(),
+      //               // name.lexeme == "init",
+      //           )));
+      //           methods_statements.insert(name.lexeme.clone(), _method);
+      //       }
+      //       _ => {
+      //         return Err(RuntimeError::InternalError(
+      //           "Found a non Stmt::Func as a method of a class".to_string(),
+      //         ))
+      //       }
+      //     };
+      //   };
+
+        
+      //   let klass = YuthValue::Class(Rc::new(YuthClass::new(
+      //     name.lexeme.clone(),
+      //     methods_statements,
+      //   )));
+        
+      //   self.environment.borrow_mut().assign(&name.lexeme, klass ).expect("class assign error");
+      //   return Ok(None);
+      // }
     }
   }
 
@@ -170,33 +204,43 @@ impl Interpreter {
         match operator.token_type {
           TokenType::Minus => { 
             match self.check_number_operand(operator, &r){
-              Ok(()) => return r.negate_number().map_err(|_| RuntimeError::RuntimeError),
+              Ok(()) => return r.negate_number().map_err(|_| RuntimeError::RuntimeError(operator.clone())),
               Err(e) => Err(e)
             }
           },
-          TokenType::Bang => return r.negate().map_err(|_| RuntimeError::RuntimeError),
+          TokenType::Bang => return r.negate().map_err(|_| RuntimeError::RuntimeError(operator.clone())),
           _ => return Err(RuntimeError::InternalError("invalid operator for unary.".to_string()))
         }
       },
-      Expr::Var(ref token, ref distance) => {
+      // Expr::Var(ref token, ref distance) => {
 
-        // resolve here 
-        match distance {
-          Some(d) => {
-            // get_at here.
-            match self.environment.borrow_mut().get_at(*d, &token) {
-              Ok(value) => Ok(value.clone()),
-              Err(_) => Err(RuntimeError::RuntimeError)
-            }
-          },
-          None => {
-            match self.globals.borrow().get_value(&token) {
-              Ok(value) => Ok(value.clone()),
-              Err(_) => Err(RuntimeError::RuntimeError)
-            }
-          }
-        }
+      //   // resolve here 
+      //   match distance {
+      //     Some(d) => {
+      //       // get_at here.
+      //       match self.environment.borrow_mut().get_at(*d, &token) {
+      //         Ok(value) => Ok(value.clone()),
+      //         Err(_) => Err(RuntimeError::RuntimeError(token.clone()))
+      //       }
+      //     },
+      //     None => {
+      //       match self.globals.borrow().get_value(&token) {
+      //         Ok(value) => Ok(value.clone()),
+      //         Err(_) => Err(RuntimeError::RuntimeError(token.clone()))
+      //       }
+      //     }
+      //   }
         
+      // },
+      Expr::Var(ref token, ref distance) => match distance {
+        &Some(distance) => match self.environment.borrow().get_at(distance, &token) {
+            Ok(value) => Ok(value.clone()),
+            Err(_) => Err(RuntimeError::UndefinedVariable(token.clone())),
+        },
+        &None => match self.globals.borrow().get_value(&token) {
+            Ok(value) => Ok(value.clone()),
+            Err(_) => Err(RuntimeError::UndefinedVariable(token.clone())),
+        },
       },
       Expr::Assign(ref token, ref expr, ref distance) => {
         let value = self.interpret_expression(expr)?;
@@ -242,24 +286,62 @@ impl Interpreter {
 
         return function.call(self, _arguments);
       },
-      Expr::Get(ref obj, ref name) => {
-        let object = self.interpret_expression(obj).unwrap();
-        match object {
-          YuthValue::Instance( ob ) => Ok(ob.borrow().get(name.clone()).unwrap() ),
-          _ => { Err(RuntimeError::RuntimeError) } // TODO: msg = "Only instances have properties.""
-        }
-      },
-      Expr::Set(ref object, ref name, ref value) => {
-        let object = self.interpret_expression(object).unwrap();
+      // Expr::Get(ref obj, ref name) => {
+      //   let object = self.interpret_expression(obj)?;
+      //   match object {
+      //     YuthValue::Instance( ob ) => Ok(ob.borrow().get(name.clone()).unwrap() ),
+      //     _ => { Err(RuntimeError::RuntimeError(name.clone())) } // TODO: msg = "Only instances have properties.""
+      //   }
+      // },
+      // Expr::Set(ref object, ref name, ref value) => {
+      //   let object = self.interpret_expression(object)?;
 
-        match object {
-          YuthValue::Instance(ref klass) => {
-            let _value = self.interpret_expression(value).unwrap();
-            klass.borrow_mut().set(name.clone(), _value.clone()); 
-            Ok(_value)
-          },
-          _ => { Err(RuntimeError::RuntimeError)} // TODO: msg = ""Only instances have fields. "
+      //   let value = match object {
+      //     YuthValue::Instance(ref klass) => {
+      //       let _value = self.interpret_expression(value)?;
+      //       klass.borrow_mut().set(name.clone(), _value.clone()); 
+      //       _value.clone()
+      //     },
+      //     _ => { return Err(RuntimeError::RuntimeError(name.clone()))} // TODO: msg = ""Only instances have fields. "
+      //   };
+
+      //   Ok(value)
+      // },
+      Expr::Get(ref target, ref token) => {
+        let resolved_target = self.interpret_expression(target)?;
+
+        match resolved_target {
+            YuthValue::Instance(ref instance) => Ok(instance.borrow().get(&token)?.clone()),
+            _ => Err(RuntimeError::InvalidGetTarget(token.clone())),
         }
+      }
+    Expr::Set(ref target, ref token, ref expr) => {
+        let resolved_target = self.interpret_expression(target)?;
+
+        let value = match resolved_target {
+            YuthValue::Instance(instance) => {
+                let resolved_value = self.interpret_expression(expr)?;
+                instance
+                    .borrow_mut()
+                    .set(token.clone(), resolved_value.clone());
+                resolved_value.clone()
+            }
+            _ => return Err(RuntimeError::InvalidGetTarget(token.clone())),
+        };
+
+        Ok(value)
+      },
+      Expr::This(ref token, ref distance) => { 
+        match distance {
+        &Some(distance) => match self.environment.borrow().get_at(distance, &token) {
+            Ok(value) => Ok(value.clone()),
+            Err(_) => { Err(RuntimeError::UndefinedVariable(token.clone())) },
+        },
+        &None => match self.globals.borrow().get_value(&token) {
+            Ok(value) => Ok(value.clone()),
+            Err(_) => Err(RuntimeError::UndefinedVariable(token.clone())),
+        },
+      }
       }
     }
   }

@@ -1,11 +1,12 @@
 use std::collections::{HashMap};
 use std::rc::Rc;
+use std::cell::RefCell;
 
 use super::expr::Expr;
 use super::yuth_class::YuthClass;
 use super::yuth::YuthValue;
 use super::token::{Literal, Token};
-use super::error::RuntimeError;
+use super::error::{ RuntimeError };
 
 #[derive(Debug, Clone)]
 pub struct YuthInstance {
@@ -21,14 +22,14 @@ impl YuthInstance {
     }
   }
 
-  pub fn get(&self, name: Token ) -> Result<YuthValue, RuntimeError>{
+  pub fn get(&self, name: &Token ) -> Result<YuthValue, RuntimeError>{
     if let Some(value) =  self.fields.get(&name.lexeme) {
       return Ok(value.clone());
     }
 
-    match self.klass.find_method(name){
-      Ok(method) => Ok(YuthValue::Func(Rc::new(method))),
-      Err(e) => Err(e)
+    match self.klass.find_method(&name.lexeme, Rc::new(RefCell::new(self.clone()))){
+      Some(method) => Ok(YuthValue::Func(Rc::new(method))),
+      None => Err(RuntimeError::UndefinedProperty(name.clone()))
     }
   }
 
