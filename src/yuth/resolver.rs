@@ -6,16 +6,19 @@ use super::error::RuntimeError;
 use super::expr::Expr;
 use super::token::{ Token, Literal };
 
-
+// to handle using this outside function's method scope.
+// eg. print this;
 #[derive(Clone, PartialEq)]
 enum ClassType {
   Class,
+  None
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 enum FunctionType {
   FUNCTION,
-  METHOD
+  METHOD,
+  INITIALIZER
 }
 
 /// basically, Resolver is to figure out how many "distance" the variables in the "scope" are.
@@ -25,7 +28,7 @@ enum FunctionType {
 /// it's only job is to "run once".
 pub struct Resolver {
   scopes: Vec<HashMap<String, bool>>,
-  class_type: Option<ClassType>,
+  current_class: Option<ClassType>,
   current_function: Option<FunctionType>
 }
 
@@ -33,7 +36,7 @@ impl Resolver {
   pub fn new() -> Resolver {
     Resolver{
       scopes: Vec::new(),
-      class_type: None,
+      current_class: None,
       current_function: None
     }
   }
@@ -64,24 +67,22 @@ impl Resolver {
       Stmt::Class(ref name, ref mut methods) => {
         self.declare(name);
 
-        let enclosing_class_type = self.class_type.clone();
-        self.class_type = Some(ClassType::Class);
+        let enclosing_class_type = self.current_class.clone();
+        self.current_class = Some(ClassType::Class);
 
         self.begin_scope();
         self.define("this".to_string());
-
-        // for method in methods {
-        //   if let Stmt::Func(_, ref params, ref mut body ) = method {
-        //     self.resolve_function(params, body, Some(FunctionType::METHOD)); 
-        //   }
-        // }
 
         for method in methods {
           match method {
             &mut Stmt::Func(ref token, ref params, ref mut body) => {
                 self.declare(token);
                 self.define(name.lexeme.clone());
-                let function_type = FunctionType::METHOD;
+
+                let function_type = match token.lexeme == "init" {
+                  true => FunctionType::INITIALIZER,
+                  false => FunctionType::METHOD
+                };
 
                 self.resolve_function(params, body, Some(function_type));
             }
@@ -90,7 +91,7 @@ impl Resolver {
         }
 
         self.end_scope();
-        self.class_type = enclosing_class_type;
+        self.current_class = enclosing_class_type;
         self.define(name.lexeme.clone());
       },
       Stmt::Expr(ref mut expr) => {
@@ -107,11 +108,17 @@ impl Resolver {
         self.resolve_expression(expr);
       },
       Stmt::Return(_, ref mut expr) => {
-      {
-        let function_type = self.current_function
-            .as_ref()
-            .expect("UnexpectedTokenError: Cannot use `return` at the top level.");
-      }
+        {
+          let function_type = self.current_function
+              .as_ref() // return None = the function is not bound to any scope, thus it is at global scope(top level).
+              .expect("UnexpectedTokenError: Cannot use `return` at the top level.");
+
+
+            if *function_type == FunctionType::INITIALIZER {
+              panic!("UnexpectedTokenError: Cannot use `return` on an initializer.")
+            }
+        }
+
 
       self.resolve_expression(expr)
     },
@@ -191,7 +198,7 @@ impl Resolver {
         self.resolve_expression(right);
       },
       Expr::This(ref token, ref mut distance ) => {
-        if self.class_type.is_none() {
+        if self.current_class.is_none() {
           panic!("UnexpectedTokenError: Cannot use `this` outside of a method.");
         }
 

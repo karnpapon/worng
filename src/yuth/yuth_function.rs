@@ -13,17 +13,19 @@ use super::error::RuntimeError;
 #[derive(Debug, Clone)]
 pub struct YuthFunction{
   declaration: Stmt,
-  closure: Rc<RefCell<Environment>>
+  closure: Rc<RefCell<Environment>>,
+  is_initializer: bool
 }
 
 
 impl YuthFunction{
-  pub fn new( declaration: Stmt, closure: Rc<RefCell<Environment>>) -> YuthFunction{
+  pub fn new( declaration: Stmt, closure: Rc<RefCell<Environment>>, is_initializer: bool) -> YuthFunction{
     match declaration{
       Stmt::Func(_,_,_) => {
         YuthFunction{
           declaration: declaration,
-          closure: closure
+          closure: closure,
+          is_initializer: is_initializer
         }
       },
       _ => panic!("Cannot build a Yuth Function with a Stmt other than Stmt::Func")
@@ -36,6 +38,7 @@ impl YuthFunction{
     YuthFunction {
       declaration: self.declaration.clone(),
       closure: Rc::new(RefCell::new(env)),
+      is_initializer: self.is_initializer
     }
   }
 }
@@ -72,6 +75,15 @@ impl Callable for YuthFunction{
       Some(res) => Ok(res),
       None => Ok(YuthValue::Nil)
     };
+
+
+    if self.is_initializer {
+      return Ok(self.closure
+          .borrow()
+          .get_at(0, &"this".to_string())
+          .expect("Couldn't find reference to `this` in initializer"));
+    }
+
 
     return result;
   }

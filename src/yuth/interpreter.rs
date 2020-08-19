@@ -85,7 +85,7 @@ impl Interpreter {
         self.interpret_block(statements, RefCell::new(env))
       },
       Stmt::Func(ref name, ref params, ref body) => {
-        let function = YuthValue::Func(Rc::new(YuthFunction::new(statement.clone(), self.environment.clone()) ) );
+        let function = YuthValue::Func(Rc::new(YuthFunction::new(statement.clone(), self.environment.clone(), false ) ) );
         self.environment.borrow_mut().define(name.clone().lexeme, function);
         return Ok(None);
       },
@@ -101,6 +101,7 @@ impl Interpreter {
                     let method = YuthValue::Func(Rc::new(YuthFunction::new(
                         method_statement.clone(),
                         self.environment.clone(),
+                        name.lexeme == "init"
                     )));
                     methods.insert(name.lexeme.clone(), method);
                 }
@@ -233,11 +234,11 @@ impl Interpreter {
         
       // },
       Expr::Var(ref token, ref distance) => match distance {
-        &Some(distance) => match self.environment.borrow().get_at(distance, &token) {
+        &Some(distance) => match self.environment.borrow().get_at(distance, &token.lexeme) {
             Ok(value) => Ok(value.clone()),
             Err(_) => Err(RuntimeError::UndefinedVariable(token.clone())),
         },
-        &None => match self.globals.borrow().get_value(&token) {
+        &None => match self.globals.borrow().get_value(&token.lexeme) {
             Ok(value) => Ok(value.clone()),
             Err(_) => Err(RuntimeError::UndefinedVariable(token.clone())),
         },
@@ -333,11 +334,11 @@ impl Interpreter {
       },
       Expr::This(ref token, ref distance) => { 
         match distance {
-        &Some(distance) => match self.environment.borrow().get_at(distance, &token) {
+        &Some(distance) => match self.environment.borrow().get_at(distance, &token.lexeme) {
             Ok(value) => Ok(value.clone()),
             Err(_) => { Err(RuntimeError::UndefinedVariable(token.clone())) },
         },
-        &None => match self.globals.borrow().get_value(&token) {
+        &None => match self.globals.borrow().get_value(&token.lexeme) {
             Ok(value) => Ok(value.clone()),
             Err(_) => Err(RuntimeError::UndefinedVariable(token.clone())),
         },

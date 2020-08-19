@@ -39,9 +39,9 @@ impl Environment {
     }
   }
 
-  pub fn get_value(&self, name: &Token) -> Result< YuthValue , EnvironmentError> {
+  pub fn get_value(&self, name: &String) -> Result< YuthValue , EnvironmentError> {
 
-    if let Some(val) = self.values.get(&name.lexeme){
+    if let Some(val) = self.values.get(name){
       return Ok(val.clone());
     }
 
@@ -52,15 +52,15 @@ impl Environment {
     Err(EnvironmentError::EnvironmentError) // no variable found.
   }
 
-  pub fn get_at(&self, distance: usize, key: &Token) -> Result<YuthValue, EnvironmentError> {
+  pub fn get_at(&self, distance: usize, key: &String) -> Result<YuthValue, EnvironmentError> {
 
     if distance == 0 {
-      return self.get_value(key);
+      return self.get_value(&key);
     }
 
     let val = match self.ancestor(distance){
       Some(enclosed_scope) => { enclosed_scope.borrow().get_value(key) },
-      None => Err(EnvironmentError::UndefinedVariable(key.lexeme.clone())),
+      None => Err(EnvironmentError::UndefinedVariable(key.clone())),
     };
     val
   }

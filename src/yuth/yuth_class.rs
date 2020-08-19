@@ -37,7 +37,7 @@ impl YuthClass {
                 .bind(instance.clone()),
             _ => panic!("Can't get non-func as method from an instance"),
         })
-}
+  }
 }
 
 impl std::fmt::Display for YuthClass {
@@ -54,13 +54,21 @@ impl Callable for YuthClass {
     args: Vec<YuthValue>) 
     -> Result<YuthValue, RuntimeError>{
 
-      let instance = YuthInstance::new(self.clone());
-      return Ok(YuthValue::Instance(Rc::new( RefCell::new( instance )) ));
+    let instance = YuthInstance::new(self.clone());
+    match self.find_method("init", Rc::new(RefCell::new(instance.clone()))) {
+      Some( _initializer ) => return _initializer.call(interpreter, args),
+      None => return Ok(YuthValue::Instance(Rc::new( RefCell::new( instance )) ))
+    };
   }
 
   fn arity(&self)  -> usize{
-    return 0
+    let instance = YuthInstance::new(self.clone());
+    match self.find_method("init", Rc::new(RefCell::new(instance) )){
+      Some(func) => return func.arity(),
+      None => return 0
+    };
   }
+
   fn func_to_string(&self) -> String {
     return String::from("class func_to_string")
   }
