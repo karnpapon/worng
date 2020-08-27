@@ -92,9 +92,45 @@ impl Interpreter {
       Stmt::Return(_, ref expr) => { 
         Ok(Some(self.interpret_expression(expr)?)) 
       },
-      Stmt::Class(ref token, ref method_statements) => {
+      Stmt::Class(ref token, ref superclass,  ref method_statements) => {
         let mut methods = HashMap::new();
+        let mut parent_env = None;
 
+        // let mut _superclass = None;
+        // let mut resolved_superclass = None;
+
+        let resolved_superclass = if let &Some(ref superclass) = superclass {
+          let superclass = match self.interpret_expression(superclass)? {
+              YuthValue::Class(ref class) => class.clone(),
+              _ => return Err(RuntimeError::InvalidSuperclass(token.clone())),
+          };
+
+          parent_env = Some(self.environment.clone());
+          let mut env = Environment::enclose(self.environment.clone());
+          env.define("super".to_string(), YuthValue::Class(superclass.clone()));
+          self.environment = Rc::new(RefCell::new(env));
+
+          Some(superclass)
+        } else {
+            None
+        };
+        
+        // if let Some(_super) = superclass {
+        //   _superclass = self.interpret_expression(_super).ok();
+        //   if let YuthValue::Class(ref klass) = _superclass.unwrap() {
+        //     resolved_superclass = Some(klass.clone());
+
+        //     parent_env = Some(self.environment.clone());
+        //     let mut env = Environment::enclose(self.environment.clone());
+        //     env.define("super".to_string(), YuthValue::Class(klass.clone()));
+        //     self.environment = Rc::new(RefCell::new(env));
+
+        //     Some(superclass)
+        //   } else {
+        //     return Err(RuntimeError::InvalidSuperclass(token.clone()))
+        //   }
+        // }
+    
         for method_statement in method_statements {
             match method_statement {
                 &Stmt::Func(ref name, _, _) => {
@@ -116,7 +152,12 @@ impl Interpreter {
         let class = YuthValue::Class(Rc::new(YuthClass::new(
             token.lexeme.clone(),
             methods,
+            resolved_superclass
         )));
+
+        if superclass.is_some() {
+          self.environment = parent_env.expect("When interpreting a subclass, a parent environment should always be present");
+        }
 
         self.environment.borrow_mut().define(token.lexeme.clone(), class);
 
@@ -213,26 +254,6 @@ impl Interpreter {
           _ => return Err(RuntimeError::InternalError("invalid operator for unary.".to_string()))
         }
       },
-      // Expr::Var(ref token, ref distance) => {
-
-      //   // resolve here 
-      //   match distance {
-      //     Some(d) => {
-      //       // get_at here.
-      //       match self.environment.borrow_mut().get_at(*d, &token) {
-      //         Ok(value) => Ok(value.clone()),
-      //         Err(_) => Err(RuntimeError::RuntimeError(token.clone()))
-      //       }
-      //     },
-      //     None => {
-      //       match self.globals.borrow().get_value(&token) {
-      //         Ok(value) => Ok(value.clone()),
-      //         Err(_) => Err(RuntimeError::RuntimeError(token.clone()))
-      //       }
-      //     }
-      //   }
-        
-      // },
       Expr::Var(ref token, ref distance) => match distance {
         &Some(distance) => match self.environment.borrow().get_at(distance, &token.lexeme) {
             Ok(value) => Ok(value.clone()),
@@ -287,27 +308,6 @@ impl Interpreter {
 
         return function.call(self, _arguments);
       },
-      // Expr::Get(ref obj, ref name) => {
-      //   let object = self.interpret_expression(obj)?;
-      //   match object {
-      //     YuthValue::Instance( ob ) => Ok(ob.borrow().get(name.clone()).unwrap() ),
-      //     _ => { Err(RuntimeError::RuntimeError(name.clone())) } // TODO: msg = "Only instances have properties.""
-      //   }
-      // },
-      // Expr::Set(ref object, ref name, ref value) => {
-      //   let object = self.interpret_expression(object)?;
-
-      //   let value = match object {
-      //     YuthValue::Instance(ref klass) => {
-      //       let _value = self.interpret_expression(value)?;
-      //       klass.borrow_mut().set(name.clone(), _value.clone()); 
-      //       _value.clone()
-      //     },
-      //     _ => { return Err(RuntimeError::RuntimeError(name.clone()))} // TODO: msg = ""Only instances have fields. "
-      //   };
-
-      //   Ok(value)
-      // },
       Expr::Get(ref target, ref token) => {
         let resolved_target = self.interpret_expression(target)?;
 
@@ -331,6 +331,44 @@ impl Interpreter {
         };
 
         Ok(value)
+      },
+      Expr::Super(_, ref method, ref distance) => match distance {
+        &Some(distance) => {
+          let superclass = self.environment
+              .borrow()
+              .get_at(distance, &"super".to_string())
+              .expect("Couldn't find `super` when interpreting");
+          let instance = self.environment
+              .borrow()
+              .get_at(distance - 1, &"this".to_string())
+              .expect("Couldn't find `this` when interpreting `super` call");
+
+          let superclass = match superclass {
+              YuthValue::Class(ref class) => class,
+              _ => {
+                return Err(RuntimeError::InternalError(
+                    "Couldn't extract YuthClass from YuthValue::Class".to_string(),
+                ))
+              }
+          };
+
+          let instance = match instance {
+              YuthValue::Instance(ref instance) => instance,
+              _ => {
+                return Err(RuntimeError::InternalError(
+                  "Couldn't extract YuthInstance from YuthValue::Instance".to_string(),
+                ))
+              }
+          };
+
+          let resolved_method = superclass.find_method(&method.lexeme, instance.clone());
+
+          match resolved_method {
+            Some(method) => Ok(YuthValue::Func(Rc::new(method))),
+            None => Err(RuntimeError::UndefinedProperty(method.clone())),
+          }
+        }
+        &None => Err(RuntimeError::InternalError( "Couldn't find distance to super reference".to_string())),
       },
       Expr::This(ref token, ref distance) => { 
         match distance {

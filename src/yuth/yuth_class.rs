@@ -14,14 +14,16 @@ use super::yuth_instance::YuthInstance;
 #[derive(Debug, Clone)]
 pub struct YuthClass {
   name: String,
-  methods: HashMap<String, YuthValue>
+  methods: HashMap<String, YuthValue>,
+  superclass: Option<Rc<YuthClass>>
 }
 
 impl YuthClass {
-  pub fn new(name: String, methods: HashMap<String, YuthValue>) -> YuthClass {
+  pub fn new(name: String, methods: HashMap<String, YuthValue>, superclass: Option<Rc<YuthClass>>,) -> YuthClass {
     YuthClass {
       name: name,
-      methods: methods
+      methods: methods,
+      superclass: superclass 
     }
   }
 
@@ -37,6 +39,13 @@ impl YuthClass {
                 .bind(instance.clone()),
             _ => panic!("Can't get non-func as method from an instance"),
         })
+        .or_else(|| {
+          if let Some(superclass) = self.superclass.clone() {
+            superclass.find_method(name, instance)
+          } else {
+            None
+          }
+      })
   }
 }
 

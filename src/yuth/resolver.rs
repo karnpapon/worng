@@ -11,7 +11,8 @@ use super::token::{ Token, Literal };
 #[derive(Clone, PartialEq)]
 enum ClassType {
   Class,
-  None
+  SubClass,
+  // None , unused since Rust has "None" for `Option` type.
 }
 
 #[derive(Clone, PartialEq)]
@@ -64,14 +65,31 @@ impl Resolver {
         self.define(name.lexeme.clone());
         self.resolve_function(params, body, Some(FunctionType::FUNCTION) );
       },
-      Stmt::Class(ref name, ref mut methods) => {
+      Stmt::Class(ref name, ref mut superclass, ref mut methods) => {
         self.declare(name);
-
         let enclosing_class_type = self.current_class.clone();
         self.current_class = Some(ClassType::Class);
 
+        if let &mut Some(ref mut superclass) = superclass {
+          self.current_class = Some(ClassType::SubClass);
+          self.resolve_expression(superclass);
+          self.begin_scope();
+          self.define("super".to_string());
+        }
+
         self.begin_scope();
         self.define("this".to_string());
+
+        if let Some(ref _super ) = superclass {
+          match _super {
+            Expr::Var(ref token, _) => {
+              if name.lexeme == token.lexeme {
+                panic!("A class cannot inherit from itself.");
+              }
+            },
+            _ => {}
+          }
+        }
 
         for method in methods {
           match method {
@@ -91,6 +109,11 @@ impl Resolver {
         }
 
         self.end_scope();
+
+        if superclass.is_some() {
+          self.end_scope();
+        }
+
         self.current_class = enclosing_class_type;
         self.define(name.lexeme.clone());
       },
@@ -186,6 +209,27 @@ impl Resolver {
         self.resolve_expression(value);
         self.resolve_expression(object);
       },
+      Expr::Super(ref keyword, ref method, ref mut distance ) => {
+        let class_type = self.current_class
+                    .as_ref()
+                    .expect("UnexpectedTokenError: Cannot use `super` outside of a method.");
+
+        match class_type {
+          &ClassType::Class => {
+            panic!("UnexpectedTokenError: Cannot use `super` without a superclass.")
+          },
+          _ => {
+            if let Some(scope) = self.scopes.last() {
+              if let Some(is_var_available) = scope.get(&keyword.lexeme) {
+                if !is_var_available {
+                    // TODO: handle Error.
+                }
+              }
+            }
+            *distance = self.resolve_local(keyword.lexeme.to_string());
+          },
+        }
+      },
       Expr::Grouping(ref mut expression) => {
         self.resolve_expression(expression);
       },
@@ -210,7 +254,6 @@ impl Resolver {
           }
         }
         *distance =  self.resolve_local(token.lexeme.to_string());
-        println!("resolve distance -> {:?}", distance);
       }
     }
 

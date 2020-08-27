@@ -50,7 +50,8 @@ declaration → class_declaration
             | var_declaration
             | statement ;
 
-class_declaration   → "class" IDENTIFIER "{" function* "}" ;
+class_declaration → "class" IDENTIFIER ( "<" IDENTIFIER )?
+            "{" function* "}" ;
 
 function_declaration  → "fun" function ;
 function → IDENTIFIER "(" parameters? ")" block ;
@@ -95,11 +96,9 @@ call → primary ( "(" arguments? ")" | "." IDENTIFIER )* ;
 
 arguments → expression ( "," expression )* ;    // eg (arg1, arg2) or more args.
 
-primary        → "true" | "false" | "nil"
-                | NUMBER | STRING
-                | "(" expression ")"
-                | IDENTIFIER ;
-
+primary → "true" | "false" | "nil" | "this"
+        | NUMBER | STRING | IDENTIFIER | "(" expression ")"
+        | "super" "." IDENTIFIER ;
 
 ```
 

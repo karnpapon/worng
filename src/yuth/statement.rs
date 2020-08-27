@@ -10,7 +10,7 @@ pub enum Stmt {
   Print(Expr),
   Var(Token, Expr),
   Block(Vec<Stmt>),
-  Class(Token, Vec<Stmt>),
+  Class(Token, Option<Expr>, Vec<Stmt>),
   If(Expr, Box<Stmt>, Box<Option<Stmt>>),
   While(Expr, Box<Stmt>),
   Func(Token, Vec<Token>, Box<Stmt>),
@@ -44,7 +44,7 @@ impl std::fmt::Display for Stmt {
       Stmt::Return(ref keyword, ref value) => {
         write!(f, "return: keyword = {:?}, value = {:?}", keyword, value)
       },
-      Stmt::Class(ref name, ref methods) => {
+      Stmt::Class(ref name,ref superclass , ref methods) => {
         write!(f, "class: name = {:?}, methods = {:?}", name, methods)
       }
     }

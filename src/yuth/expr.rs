@@ -14,7 +14,8 @@ pub enum Expr{
   Assign(Token, Box<Expr>, Option<usize>),
   Set(Box<Expr>, Token, Box<Expr>),
   Logical(Box<Expr>, Token, Box<Expr>),
-  This(Token, Option<usize>)
+  This(Token, Option<usize>),
+  Super(Token, Token, Option<usize>)
 }
 
 
@@ -55,6 +56,9 @@ impl fmt::Display for Expr {
       },
       Expr::This(ref keyword, _) => {
         write!(f, "this = {}", keyword.lexeme)
+      },
+      Expr::Super(ref keyword, ref method, _) => {
+        write!(f, "super key = {}, method = {}", keyword.lexeme, method.lexeme )
       }
     }
   }

@@ -33,6 +33,7 @@ pub enum RuntimeError{
   DivideByZero(Token),
   DivideInvalidType,
   InternalError(String),
+  InvalidSuperclass(Token),
   InvalidGetTarget(Token),
   UndefinedVariable(Token),
   UndefinedProperty(Token),
@@ -97,6 +98,9 @@ impl std::fmt::Display for RuntimeError {
       },
       RuntimeError::InvalidGetTarget(ref token) => {
         write!(f,  "invalid get target")
+      },
+      RuntimeError::InvalidSuperclass(ref token) => {
+        write!(f,  "InvalidSuperclass: Superclass must be a class {}", token.lexeme)
       },
       RuntimeError::UndefinedProperty(ref token) => {
         write!(f,  "[line {}] Undefined property -> {}", token.line, token.lexeme)
