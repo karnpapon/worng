@@ -1,7 +1,7 @@
 # Youth Programming Language.
 
 dynamic programming language and tree-walk interpreter, written in Rust.
-inspired by Lox language from this [book](http://craftinginterpreters.com/) by Bob Nystrom ( highly recommend to check this out, it's comprehensive/enjoying to read),note that an bytecode VM is not implemented yet.
+inspired by Lox language from this [book](http://craftinginterpreters.com/) by Bob Nystrom ( highly recommend to check this out, it's comprehensive/enjoying to read),note that bytecode VM is not implemented yet.
 
 
 ## start
