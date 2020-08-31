@@ -1,4 +1,5 @@
 use std::rc::Rc;
+use std::io;
 use std::cell::RefCell;
 use std::error::{Error};
 use std::collections::HashMap;
@@ -6,34 +7,36 @@ use std::collections::HashMap;
 use super::expr::Expr;
 use super::token_type::TokenType;
 use super::token::{Literal, Token};
-use super::yuth::{YuthValue};
+use super::worng_value::{WorngValue};
 use super::statement::Stmt;
-use super::error::{YuthError, ParsingError, RuntimeError };
-use super::yuth_function::YuthFunction;
-use super::yuth_class::YuthClass;
+use super::error::{WorngError, ParsingError, RuntimeError };
+use super::worng_function::WorngFunction;
+use super::worng_class::WorngClass;
 use super::environment::Environment;
 
-pub struct Interpreter{
+pub struct Interpreter<'a>{
   pub globals: Rc<RefCell<Environment>>,
   environment: Rc<RefCell<Environment>>,
-  locals: HashMap<Expr, usize>
+  locals: HashMap<Expr, usize>,
+  writer: Rc<RefCell<&'a mut io::Write>>,
 }
 
-impl Interpreter {
+impl<'a> Interpreter<'a> {
 
-  pub fn new() -> Self{
+  pub fn new(writer: Rc<RefCell<&'a mut io::Write>>) -> Self{
     let globals = Rc::new(RefCell::new(Environment::global()));
 
     Interpreter{
       globals: globals.clone(),
       environment: globals.clone(),
-      locals: HashMap::new()
+      locals: HashMap::new(),
+      writer: writer
     }
   }
 
-  pub fn check_number_operand(&self, _operator: &Token, operand: &YuthValue) -> Result<(), RuntimeError> {
+  pub fn check_number_operand(&self, _operator: &Token, operand: &WorngValue) -> Result<(), RuntimeError> {
     match operand {
-      YuthValue::Number(value) => { return Ok(()) },
+      WorngValue::Number(value) => { return Ok(()) },
       _ => Err(RuntimeError::InternalError("Operand must be a number.".to_string()))
     }
   }
@@ -47,16 +50,15 @@ impl Interpreter {
     None
   }
 
-  pub fn interpret_statement(&mut self, statement: &Stmt) -> Result<Option<YuthValue>, RuntimeError> {
+  pub fn interpret_statement(&mut self, statement: &Stmt) -> Result<Option<WorngValue>, RuntimeError> {
     match *statement {
-      Stmt::Print(ref expr) => { 
-        return self.interpret_expression(expr).map(|value| { 
-          let msg = format!("{}\n", value);
-          print!("{}" ,&msg);
-          None
-         }
-        )
-      },
+      Stmt::Print(ref expr) => self.interpret_expression(expr).map(|val| {
+        self.writer
+            .borrow_mut()
+            .write_all(format!("{}\n", val).as_ref())
+            .expect("Error writing to stdout/writer");
+        None
+    }),
       Stmt::Expr(ref expr) => { self.interpret_expression(expr).map(|_| None) },
       Stmt::Var(ref token, ref expr) => self.interpret_expression(expr).map(|value| {
         self.environment.borrow_mut().define(token.lexeme.clone(), value);
@@ -85,7 +87,7 @@ impl Interpreter {
         self.interpret_block(statements, RefCell::new(env))
       },
       Stmt::Func(ref name, ref params, ref body) => {
-        let function = YuthValue::Func(Rc::new(YuthFunction::new(statement.clone(), self.environment.clone(), false ) ) );
+        let function = WorngValue::Func(Rc::new(WorngFunction::new(statement.clone(), self.environment.clone(), false ) ) );
         self.environment.borrow_mut().define(name.clone().lexeme, function);
         return Ok(None);
       },
@@ -101,13 +103,13 @@ impl Interpreter {
 
         let resolved_superclass = if let &Some(ref superclass) = superclass {
           let superclass = match self.interpret_expression(superclass)? {
-              YuthValue::Class(ref class) => class.clone(),
+              WorngValue::Class(ref class) => class.clone(),
               _ => return Err(RuntimeError::InvalidSuperclass(token.clone())),
           };
 
           parent_env = Some(self.environment.clone());
           let mut env = Environment::enclose(self.environment.clone());
-          env.define("super".to_string(), YuthValue::Class(superclass.clone()));
+          env.define("super".to_string(), WorngValue::Class(superclass.clone()));
           self.environment = Rc::new(RefCell::new(env));
 
           Some(superclass)
@@ -117,12 +119,12 @@ impl Interpreter {
         
         // if let Some(_super) = superclass {
         //   _superclass = self.interpret_expression(_super).ok();
-        //   if let YuthValue::Class(ref klass) = _superclass.unwrap() {
+        //   if let WorngValue::Class(ref klass) = _superclass.unwrap() {
         //     resolved_superclass = Some(klass.clone());
 
         //     parent_env = Some(self.environment.clone());
         //     let mut env = Environment::enclose(self.environment.clone());
-        //     env.define("super".to_string(), YuthValue::Class(klass.clone()));
+        //     env.define("super".to_string(), WorngValue::Class(klass.clone()));
         //     self.environment = Rc::new(RefCell::new(env));
 
         //     Some(superclass)
@@ -134,7 +136,7 @@ impl Interpreter {
         for method_statement in method_statements {
             match method_statement {
                 &Stmt::Func(ref name, _, _) => {
-                    let method = YuthValue::Func(Rc::new(YuthFunction::new(
+                    let method = WorngValue::Func(Rc::new(WorngFunction::new(
                         method_statement.clone(),
                         self.environment.clone(),
                         name.lexeme == "init"
@@ -149,7 +151,7 @@ impl Interpreter {
             };
         }
 
-        let class = YuthValue::Class(Rc::new(YuthClass::new(
+        let class = WorngValue::Class(Rc::new(WorngClass::new(
             token.lexeme.clone(),
             methods,
             resolved_superclass
@@ -164,13 +166,13 @@ impl Interpreter {
         Ok(None)
       },
       // Stmt::Class(ref name, ref methods ) => {
-      //   self.environment.borrow_mut().define(name.lexeme.clone(), YuthValue::Nil);
+      //   self.environment.borrow_mut().define(name.lexeme.clone(), WorngValue::Nil);
       //   let mut methods_statements = HashMap::new();
 
       //   for method_stmt in methods {
       //     match method_stmt {
       //       &Stmt::Func(ref name, _, _) => {
-      //           let _method = YuthValue::Func(Rc::new(YuthFunction::new(
+      //           let _method = WorngValue::Func(Rc::new(WorngFunction::new(
       //             method_stmt.clone(),
       //               self.environment.clone(),
       //               // name.lexeme == "init",
@@ -186,7 +188,7 @@ impl Interpreter {
       //   };
 
         
-      //   let klass = YuthValue::Class(Rc::new(YuthClass::new(
+      //   let klass = WorngValue::Class(Rc::new(WorngClass::new(
       //     name.lexeme.clone(),
       //     methods_statements,
       //   )));
@@ -197,7 +199,7 @@ impl Interpreter {
     }
   }
 
-  pub fn interpret_block( &mut self, statements: &Vec<Stmt>, _environment: RefCell<Environment>) -> Result<Option<YuthValue>, RuntimeError> {
+  pub fn interpret_block( &mut self, statements: &Vec<Stmt>, _environment: RefCell<Environment>) -> Result<Option<WorngValue>, RuntimeError> {
     let mut return_value = None;
     let previous = self.environment.clone();
     self.environment = Rc::new(_environment);
@@ -214,7 +216,7 @@ impl Interpreter {
     Ok(return_value)
   }
 
-  pub fn interpret_expression(&mut self, expression: &Expr) -> Result<YuthValue, RuntimeError>  {
+  pub fn interpret_expression(&mut self, expression: &Expr) -> Result<WorngValue, RuntimeError>  {
     match *expression {
       Expr::Literal(ref literal) => {
         if let Some(value) = literal.value() {
@@ -312,7 +314,7 @@ impl Interpreter {
         let resolved_target = self.interpret_expression(target)?;
 
         match resolved_target {
-            YuthValue::Instance(ref instance) => Ok(instance.borrow().get(&token)?.clone()),
+            WorngValue::Instance(ref instance) => Ok(instance.borrow().get(&token)?.clone()),
             _ => Err(RuntimeError::InvalidGetTarget(token.clone())),
         }
       }
@@ -320,7 +322,7 @@ impl Interpreter {
         let resolved_target = self.interpret_expression(target)?;
 
         let value = match resolved_target {
-            YuthValue::Instance(instance) => {
+            WorngValue::Instance(instance) => {
                 let resolved_value = self.interpret_expression(expr)?;
                 instance
                     .borrow_mut()
@@ -344,19 +346,19 @@ impl Interpreter {
               .expect("Couldn't find `this` when interpreting `super` call");
 
           let superclass = match superclass {
-              YuthValue::Class(ref class) => class,
+              WorngValue::Class(ref class) => class,
               _ => {
                 return Err(RuntimeError::InternalError(
-                    "Couldn't extract YuthClass from YuthValue::Class".to_string(),
+                    "Couldn't extract WorngClass from WorngValue::Class".to_string(),
                 ))
               }
           };
 
           let instance = match instance {
-              YuthValue::Instance(ref instance) => instance,
+              WorngValue::Instance(ref instance) => instance,
               _ => {
                 return Err(RuntimeError::InternalError(
-                  "Couldn't extract YuthInstance from YuthValue::Instance".to_string(),
+                  "Couldn't extract WorngInstance from WorngValue::Instance".to_string(),
                 ))
               }
           };
@@ -364,7 +366,7 @@ impl Interpreter {
           let resolved_method = superclass.find_method(&method.lexeme, instance.clone());
 
           match resolved_method {
-            Some(method) => Ok(YuthValue::Func(Rc::new(method))),
+            Some(method) => Ok(WorngValue::Func(Rc::new(method))),
             None => Err(RuntimeError::UndefinedProperty(method.clone())),
           }
         }

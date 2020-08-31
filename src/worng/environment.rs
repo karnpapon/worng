@@ -6,12 +6,12 @@ use super::expr::Expr;
 use super::native_function::NativeClock;
 use super::token::{ Token };
 use super::error::{ RuntimeError, EnvironmentError };
-use super::yuth::{YuthValue};
+use super::worng_value::{WorngValue};
 
 #[derive(Debug)]
 pub struct Environment {
   pub enclosing: Option<Rc<RefCell<Environment>>>,
-  values: HashMap<String, YuthValue>
+  values: HashMap<String, WorngValue>
 }
 
 impl Environment {
@@ -22,13 +22,13 @@ impl Environment {
     }
   }
 
-  pub fn define(&mut self, string: String, value: YuthValue) {
+  pub fn define(&mut self, string: String, value: WorngValue) {
     self.values.insert(string, value); 
   }
 
   pub fn global() -> Environment {
     let mut env = Environment::new();
-    env.define( "clock".to_string(), YuthValue::Func(Rc::new(NativeClock::new())));
+    env.define( "clock".to_string(), WorngValue::Func(Rc::new(NativeClock::new())));
     env
   }
 
@@ -39,7 +39,7 @@ impl Environment {
     }
   }
 
-  pub fn get_value(&self, name: &String) -> Result< YuthValue , EnvironmentError> {
+  pub fn get_value(&self, name: &String) -> Result< WorngValue , EnvironmentError> {
 
     if let Some(val) = self.values.get(name){
       return Ok(val.clone());
@@ -52,7 +52,7 @@ impl Environment {
     Err(EnvironmentError::EnvironmentError) // no variable found.
   }
 
-  pub fn get_at(&self, distance: usize, key: &String) -> Result<YuthValue, EnvironmentError> {
+  pub fn get_at(&self, distance: usize, key: &String) -> Result<WorngValue, EnvironmentError> {
 
     if distance == 0 {
       return self.get_value(&key);
@@ -82,7 +82,7 @@ impl Environment {
     Some(ancestor)
   }
 
-  pub fn assign(&mut self, key: &String, value: YuthValue) -> Result<() , EnvironmentError>  {
+  pub fn assign(&mut self, key: &String, value: WorngValue) -> Result<() , EnvironmentError>  {
     if self.values.contains_key(key) {
       self.values.insert(key.clone(), value);
       return Ok(())
@@ -95,7 +95,7 @@ impl Environment {
     Err(EnvironmentError::UndefinedVariable(key.clone()))
   }
 
-  pub fn assign_at(&mut self, distance: usize, key: &Token, value: YuthValue) -> Result<(), EnvironmentError> {
+  pub fn assign_at(&mut self, distance: usize, key: &Token, value: WorngValue) -> Result<(), EnvironmentError> {
     if distance == 0 {
       return self.assign(&key.lexeme, value);
     }

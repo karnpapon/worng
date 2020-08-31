@@ -6,36 +6,36 @@ use super::statement::Stmt;
 use super::callable::Callable;
 use super::interpreter::Interpreter;
 use super::environment::Environment;
-use super::yuth::YuthValue;
-use super::yuth_instance::YuthInstance;
+use super::worng_value::WorngValue;
+use super::worng_instance::WorngInstance;
 use super::error::RuntimeError;
 
 #[derive(Debug, Clone)]
-pub struct YuthFunction{
+pub struct WorngFunction{
   declaration: Stmt,
   closure: Rc<RefCell<Environment>>,
   is_initializer: bool
 }
 
 
-impl YuthFunction{
-  pub fn new( declaration: Stmt, closure: Rc<RefCell<Environment>>, is_initializer: bool) -> YuthFunction{
+impl WorngFunction{
+  pub fn new( declaration: Stmt, closure: Rc<RefCell<Environment>>, is_initializer: bool) -> WorngFunction{
     match declaration{
       Stmt::Func(_,_,_) => {
-        YuthFunction{
+        WorngFunction{
           declaration: declaration,
           closure: closure,
           is_initializer: is_initializer
         }
       },
-      _ => panic!("Cannot build a Yuth Function with a Stmt other than Stmt::Func")
+      _ => panic!("Cannot build a Worng Function with a Stmt other than Stmt::Func")
     }
   }
 
-  pub fn bind(&self, instance: Rc<RefCell<YuthInstance>>) -> YuthFunction {
+  pub fn bind(&self, instance: Rc<RefCell<WorngInstance>>) -> WorngFunction {
     let mut env = Environment::enclose(self.closure.clone());
-    env.define("this".to_string(), YuthValue::Instance(instance.clone()));
-    YuthFunction {
+    env.define("this".to_string(), WorngValue::Instance(instance.clone()));
+    WorngFunction {
       declaration: self.declaration.clone(),
       closure: Rc::new(RefCell::new(env)),
       is_initializer: self.is_initializer
@@ -44,8 +44,8 @@ impl YuthFunction{
 }
 
 
-impl Callable for YuthFunction{
-  fn call(&self, interpreter: &mut Interpreter, args: Vec<YuthValue>) -> Result<YuthValue, RuntimeError>{
+impl Callable for WorngFunction{
+  fn call(&self, interpreter: &mut Interpreter, args: Vec<WorngValue>) -> Result<WorngValue, RuntimeError>{
 
     // each function has it's own environment
     // eg. recursive function has to have it's "enclosed" environment, 
@@ -73,7 +73,7 @@ impl Callable for YuthFunction{
 
     let result = match interpreter.interpret_block(body, RefCell::new(environment))? {
       Some(res) => Ok(res),
-      None => Ok(YuthValue::Nil)
+      None => Ok(WorngValue::Nil)
     };
 
 

@@ -5,37 +5,37 @@ use std::any::Any;
 
 use super::callable::Callable;
 use super::interpreter::Interpreter;
-use super::error::{ RuntimeError, YuthError, ValueError };
-use super::yuth::YuthValue;
+use super::error::{ RuntimeError, WorngError, ValueError };
+use super::worng_value::WorngValue;
 use super::token::Token;
-use super::yuth_function::YuthFunction;
-use super::yuth_instance::YuthInstance;
+use super::worng_function::WorngFunction;
+use super::worng_instance::WorngInstance;
 
 #[derive(Debug, Clone)]
-pub struct YuthClass {
+pub struct WorngClass {
   name: String,
-  methods: HashMap<String, YuthValue>,
-  superclass: Option<Rc<YuthClass>>
+  methods: HashMap<String, WorngValue>,
+  superclass: Option<Rc<WorngClass>>
 }
 
-impl YuthClass {
-  pub fn new(name: String, methods: HashMap<String, YuthValue>, superclass: Option<Rc<YuthClass>>,) -> YuthClass {
-    YuthClass {
+impl WorngClass {
+  pub fn new(name: String, methods: HashMap<String, WorngValue>, superclass: Option<Rc<WorngClass>>,) -> WorngClass {
+    WorngClass {
       name: name,
       methods: methods,
       superclass: superclass 
     }
   }
 
-  pub fn find_method(&self, name: &str, instance: Rc<RefCell<YuthInstance>>) -> Option<YuthFunction> {
+  pub fn find_method(&self, name: &str, instance: Rc<RefCell<WorngInstance>>) -> Option<WorngFunction> {
     self.methods
         .get(name)
         .map(|method| method.clone())
         .map(|method| match method {
-            YuthValue::Func(ref callable) => callable
+            WorngValue::Func(ref callable) => callable
                 .as_any()
-                .downcast_ref::<YuthFunction>()
-                .expect("Couldn't cast Callable to YuthFunc in YuthValue::Function")
+                .downcast_ref::<WorngFunction>()
+                .expect("Couldn't cast Callable to WorngFunc in WorngValue::Function")
                 .bind(instance.clone()),
             _ => panic!("Can't get non-func as method from an instance"),
         })
@@ -49,29 +49,29 @@ impl YuthClass {
   }
 }
 
-impl std::fmt::Display for YuthClass {
+impl std::fmt::Display for WorngClass {
   fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
     write!(f, "{}", self.name)
   }
 }
 
-impl Callable for YuthClass {
+impl Callable for WorngClass {
 
   fn call(
     &self, 
     interpreter: &mut Interpreter, 
-    args: Vec<YuthValue>) 
-    -> Result<YuthValue, RuntimeError>{
+    args: Vec<WorngValue>) 
+    -> Result<WorngValue, RuntimeError>{
 
-    let instance = YuthInstance::new(self.clone());
+    let instance = WorngInstance::new(self.clone());
     match self.find_method("init", Rc::new(RefCell::new(instance.clone()))) {
       Some( _initializer ) => return _initializer.call(interpreter, args),
-      None => return Ok(YuthValue::Instance(Rc::new( RefCell::new( instance )) ))
+      None => return Ok(WorngValue::Instance(Rc::new( RefCell::new( instance )) ))
     };
   }
 
   fn arity(&self)  -> usize{
-    let instance = YuthInstance::new(self.clone());
+    let instance = WorngInstance::new(self.clone());
     match self.find_method("init", Rc::new(RefCell::new(instance) )){
       Some(func) => return func.arity(),
       None => return 0

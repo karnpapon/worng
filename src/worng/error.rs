@@ -1,6 +1,6 @@
 use super::token::Token;
 
-pub enum YuthError{
+pub enum WorngError{
   ValueError(ValueError),
   ParsingError(ParsingError),
   RuntimeError(RuntimeError) 

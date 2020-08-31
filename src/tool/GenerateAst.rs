@@ -55,7 +55,7 @@ fn define_ast(output_dir: &str, base_name: String, types: Vec<&str> ) -> Result<
 
   // PrintWriter writer = new PrintWriter(path, "UTF-8");
 
-  // writer.println("package com.craftinginterpreters.yuth;");
+  // writer.println("package com.craftinginterpreters.worng;");
   // writer.println();
   // writer.println("import java.util.List;");
   // writer.println();

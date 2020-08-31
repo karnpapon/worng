@@ -1,23 +1,21 @@
-pub mod yuth;
+extern crate worng;
 // pub mod bin; // not part of interpreter, only for debugging.
 
 use std::env;
-use yuth::yuth::Yuth;
-use yuth::expr;
-use yuth::ast_printer;
-use yuth::parser;
-use yuth::interpreter;
-// use tool::GenerateAst; 
-
+use worng::Worng;
 
 fn main() {
-  let args: Vec<String> = env::args().collect();
+  // let args: Vec<String> = env::args().collect();
+  let mut args = env::args();
+  args.next();
+  let args: Vec<String> = args.collect();
+
   let v: Vec<&str> = args.iter().map(|x| &**x).collect(); // Vec<String> -> Vec<&str>
-  let mut l = Yuth { 
+  let mut l = Worng { 
     had_error: false, 
     had_runtime_error: false, 
   };
 
-  Yuth::main(&mut l, v);
+  Worng::main(&mut l, v);
 
 }

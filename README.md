@@ -1,32 +1,25 @@
 # Youth Programming Language.
 
+dynamic programming language and tree-walk interpreter, written in Rust.
+inspired by Lox language from this [book](http://craftinginterpreters.com/) by Bob Nystrom ( highly recommend to check this out, it's comprehensive/enjoying to read),note that an bytecode VM is not implemented yet.
 
 
-```
-
-## Quick start
+## start
 
 ```
 # run interpreter (REPL)
 cargo run  
 
+or
+
 # run file
-cargo run -- <filename.yuth>
-
-# UNUSED!
-# to generate abstract syntax tree (AST)
-# use this pattern
-# cargo run --bin <filename> -- <destination>
-cargo run --bin GenerateAst -- src/yuth
+cargo run -- <filename.worng>
 ```
 
 
-
-rules
+## rules
 
 ```
-
-// initial rules.
 
 expression → literal
            | unary
@@ -101,6 +94,3 @@ primary → "true" | "false" | "nil" | "this"
         | "super" "." IDENTIFIER ;
 
 ```
-
-# Thanks
-it is inspired by Lox language from this [book](http://craftinginterpreters.com/) by Bob Nystrom ( highly recommend to check this out, it's comprehensive/enjoying to read).

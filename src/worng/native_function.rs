@@ -3,7 +3,7 @@ use std::any::Any;
 
 
 use super::callable::Callable;
-use super::yuth::YuthValue;
+use super::worng_value::WorngValue;
 use super::error::RuntimeError;
 use super::interpreter::Interpreter;
 
@@ -28,8 +28,8 @@ impl Callable for NativeClock {
     return 0;
   }
 
-  fn call(&self, interpreter: &mut Interpreter, args: Vec<YuthValue> ) ->  Result<YuthValue, RuntimeError>{
-    Ok(YuthValue::Number(get_current_time() as f64)) 
+  fn call(&self, interpreter: &mut Interpreter, args: Vec<WorngValue> ) ->  Result<WorngValue, RuntimeError>{
+    Ok(WorngValue::Number(get_current_time() as f64)) 
   }
 
   fn func_to_string(&self) -> String{

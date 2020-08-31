@@ -1,5 +1,5 @@
 use super::token_type::TokenType;
-use super::yuth::{YuthValue};
+use super::worng_value::{WorngValue};
 
 #[derive(Debug, PartialEq,Clone)]
 pub enum Literal {
@@ -60,13 +60,13 @@ impl Token{
 
 
 impl Literal {
-  pub fn value(&self) -> Option<YuthValue> {
+  pub fn value(&self) -> Option<WorngValue> {
     let v = match *self {
-      // Literal::Identifier(ref iden) => Some(YuthValue::Identifier(iden.to_string())),
-      Literal::Number(number) => Some(YuthValue::Number(number)),
-      Literal::String(ref string) => Some(YuthValue::String(string.to_string())),
-      Literal::Bool(ref boo) => Some(YuthValue::Bool(boo.clone())),
-      Literal::Nil => Some(YuthValue::Nil),
+      // Literal::Identifier(ref iden) => Some(WorngValue::Identifier(iden.to_string())),
+      Literal::Number(number) => Some(WorngValue::Number(number)),
+      Literal::String(ref string) => Some(WorngValue::String(string.to_string())),
+      Literal::Bool(ref boo) => Some(WorngValue::Bool(boo.clone())),
+      Literal::Nil => Some(WorngValue::Nil),
     };
 
     v

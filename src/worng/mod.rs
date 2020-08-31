@@ -1,4 +1,4 @@
-pub mod yuth;
+pub mod worng_value;
 pub mod token;
 pub mod token_type;
 pub mod scanner;
@@ -11,7 +11,8 @@ pub mod statement;
 pub mod environment;
 pub mod callable;
 pub mod native_function;
-pub mod yuth_function;
-pub mod yuth_instance;
-pub mod yuth_class;
+pub mod worng_function;
+pub mod worng_instance;
+pub mod worng_class;
 pub mod resolver;
+pub mod wasm;

@@ -1,5 +1,5 @@
 [package]
-name = "yuth-language"
+name = "worng"
 version = "0.1.0"
 authors = ["karnpapon <karnpapon@gmail.com>"]
 edition = "2018"
@@ -9,4 +9,3 @@ edition = "2018"
 [dependencies]
 rustyline = "6.2.0"
 clap = "3.0.0-beta.1"
-
